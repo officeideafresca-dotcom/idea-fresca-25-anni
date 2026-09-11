@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Idea Fresca — 25 Anni</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="app">
+  <div class="app-header">
+    <div class="lang-switch" id="langSwitch"></div>
+    <div class="brand" id="brandText">Idea Fresca — 25 Anni</div>
+    <div class="slogan" id="sloganText">La nostra visione, costruita da tutti noi</div>
+    <div class="status-badge" id="statusBadge">—</div>
+  </div>
+
+  <div class="app-body" id="appBody">
+    <!-- Table selection -->
+    <div class="card" id="tableSelectCard">
+      <h2 id="selectTableTitle">Seleziona il tuo tavolo</h2>
+      <div class="table-grid" id="tableGrid"></div>
+    </div>
+
+    <div id="mainContent" style="display:none; flex-direction:column; gap:18px;">
+      <div class="card" style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-size:0.75rem; color:#888;" id="yourTableLabel">Il tuo tavolo</div>
+          <div style="font-size:1.4rem; font-weight:800; color:var(--if-green-dark);" id="yourTableNumber">—</div>
+        </div>
+        <button class="btn secondary" style="width:auto; margin:0;" id="changeTableBtn">Cambia tavolo</button>
+      </div>
+
+      <div class="card" id="metricsCard">
+        <h2 id="metricsTitle">I Numeri: la Visione 2027–2028</h2>
+        <p class="subtitle" id="metricsSubtitle">Discutete al tavolo e inserite i 3 numeri chiave entro 7 minuti</p>
+
+        <label id="leaderNameLabel">Nome del Team Leader</label>
+        <input type="text" id="leaderName" placeholder="" />
+
+        <label id="metric1Label">Il Moltiplicatore di Rete</label>
+        <p class="help-text" id="metric1Help"></p>
+        <div class="metric-row">
+          <input type="number" id="metric1" min="0" step="1" />
+          <span class="metric-unit" id="metric1Unit"></span>
+        </div>
+
+        <label id="metric2Label">Target di Fidelizzazione</label>
+        <p class="help-text" id="metric2Help"></p>
+        <div class="metric-row">
+          <input type="number" id="metric2" min="0" max="100" step="1" />
+          <span class="metric-unit" id="metric2Unit"></span>
+        </div>
+
+        <label id="metric3Label">Il Numero Simbolico del 25°</label>
+        <p class="help-text" id="metric3Help"></p>
+        <div class="metric-row">
+          <input type="number" id="metric3Value" min="0" step="1" style="max-width:110px;" />
+          <input type="text" id="metric3Label_" placeholder="" />
+        </div>
+
+        <button class="btn" id="submitMetricsBtn">Invia i numeri del tavolo</button>
+        <div class="saved-note" id="metricsSavedNote">Numeri inviati!</div>
+      </div>
+
+      <div class="card" id="photoCard">
+        <h2 id="photoTitle">L'Immagine: il Fattore Umano</h2>
+        <p class="subtitle" id="photoSubtitle">Scatta un selfie di squadra pieno di energia</p>
+
+        <input type="file" accept="image/*" capture="user" id="photoInput" style="display:none;" />
+        <button class="btn gold" id="takePhotoBtn">Scatta / carica selfie</button>
+        <img id="photoPreview" class="photo-preview" alt="" />
+        <div class="photo-count" id="photoCountText"></div>
+
+        <div id="chooseIconLabel" style="margin-top:14px; font-size:0.85rem; font-weight:600; color:#444;">Oppure scegli un'icona valoriale</div>
+        <div class="icon-grid" id="iconGrid"></div>
+      </div>
+
+      <div class="live-ticker" id="liveTicker">
+        <h3 id="liveTotalsLabel">Totale Idea Fresca in tempo reale</h3>
+        <div class="stat"><span id="lt1Label">Nuovi Partner</span><b id="lt1Value">0</b></div>
+        <div class="stat"><span id="lt2Label">Fidelizzazione Media</span><b id="lt2Value">0%</b></div>
+        <div class="stat"><span id="lt3Label">Azioni per il 25°</span><b id="lt3Value">0</b></div>
+        <div class="stat"><span id="lt4Label">Tavoli inviati</span><b id="lt4Value">0 / 10</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">Idea Fresca · Digital Vision Mosaic &amp; Numbers Quest</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/i18n.js"></script>
+<script src="/js/participant.js"></script>
+</body>
+</html>
