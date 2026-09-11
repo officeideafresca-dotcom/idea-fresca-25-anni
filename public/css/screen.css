@@ -43,11 +43,6 @@ html, body {
   color: var(--if-gold);
   letter-spacing: 1px;
 }
-.gear-btn {
-  background: none; border: 1px solid rgba(255,255,255,0.3); color: #fff;
-  border-radius: 50%; width: 38px; height: 38px; cursor: pointer; font-size: 1.1rem;
-}
-
 /* ---------- Totals band ---------- */
 .totals-band {
   display: flex; justify-content: center; gap: 60px;
@@ -173,34 +168,8 @@ html, body {
 .screen.reveal .side-col { opacity: 0.4; }
 .screen.reveal .mosaic-title { color: rgba(199,154,43,0.28); font-size: 9rem; }
 .reveal-banner {
-  position: absolute; top: 90px; left: 0; right: 0;
-  text-align: center; z-index: 10;
+  text-align: center;
+  padding: 10px 20px 0;
   font-size: 1.4rem; font-weight: 800; color: var(--if-gold);
   text-shadow: 0 2px 12px rgba(0,0,0,0.6);
 }
-
-/* ---------- Admin modal ---------- */
-.admin-modal {
-  position: fixed; inset: 0; display: none;
-  align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.6); z-index: 100;
-}
-.admin-modal.show { display: flex; }
-.admin-box {
-  background: #142a26; border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 16px; padding: 24px; width: 340px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.admin-box h3 { margin: 0 0 6px; color: var(--if-gold); }
-.admin-box input {
-  padding: 10px; border-radius: 8px; border: 1px solid #333; font-size: 1rem;
-}
-.admin-box button {
-  padding: 10px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer;
-}
-.admin-box .row { display: flex; gap: 8px; }
-.admin-box .row button { flex: 1; }
-.admin-btn-primary { background: var(--if-gold); color: #2a1a00; }
-.admin-btn-secondary { background: #2a5148; color: #fff; }
-.admin-btn-danger { background: #8a3a2c; color: #fff; }
-.admin-close { background: none !important; color: #999 !important; text-decoration: underline; }

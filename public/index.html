@@ -70,6 +70,12 @@
         <input type="file" accept="image/*" capture="user" id="photoInput" style="display:none;" />
         <button class="btn gold" id="takePhotoBtn">Scatta / carica selfie</button>
         <img id="photoPreview" class="photo-preview" alt="" />
+
+        <label id="powerMessageLabel">Power Message</label>
+        <p class="help-text" id="powerMessageHelp"></p>
+        <input type="text" id="powerMessageInput" maxlength="60" placeholder="" />
+
+        <button class="btn" id="sendPhotoBtn" style="display:none;">Invia foto</button>
         <div class="photo-count" id="photoCountText"></div>
 
         <div id="chooseIconLabel" style="margin-top:14px; font-size:0.85rem; font-weight:600; color:#444;">Oppure scegli un'icona valoriale</div>
@@ -90,6 +96,16 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="final-image-overlay" id="finalImageOverlay">
+  <div class="final-image-box">
+    <h2 id="finalImageTitle">La nostra visione è pronta!</h2>
+    <img id="finalImageImg" alt="" />
+    <p class="hint" id="finalImageHint">Tieni premuto sull'immagine per salvarla.</p>
+    <a class="btn gold" id="finalImageSaveBtn" download="idea-fresca-25-anni-vision.jpg">Salva sul telefono</a>
+    <button class="btn secondary" id="finalImageCloseBtn">Chiudi</button>
+  </div>
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/i18n.js"></script>

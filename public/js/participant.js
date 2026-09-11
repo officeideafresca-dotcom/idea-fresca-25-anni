@@ -60,12 +60,20 @@
     el('photoTitle').textContent = T('photoTitle');
     el('photoSubtitle').textContent = T('photoSubtitle');
     el('takePhotoBtn').textContent = T('takePhoto');
+    el('powerMessageLabel').textContent = T('powerMessageLabel');
+    el('powerMessageHelp').textContent = T('powerMessageHelp');
+    el('powerMessageInput').placeholder = T('powerMessagePlaceholder');
+    el('sendPhotoBtn').textContent = T('sendPhoto');
     el('chooseIconLabel').textContent = T('chooseIcon');
     el('liveTotalsLabel').textContent = T('liveTotals');
     el('lt1Label').textContent = T('screen.newPartners');
     el('lt2Label').textContent = T('screen.retention');
     el('lt3Label').textContent = T('screen.symbolicTotal');
     el('lt4Label').textContent = T('screen.tablesIn');
+    el('finalImageTitle').textContent = T('finalImageTitle');
+    el('finalImageHint').textContent = T('finalImageHint');
+    el('finalImageSaveBtn').textContent = T('finalImageSave');
+    el('finalImageCloseBtn').textContent = T('finalImageClose');
     renderIconGrid();
     renderTableGrid();
     updateStatusBadge();
@@ -176,7 +184,7 @@
     showToast(T('metricsSaved'));
   });
 
-  // ---- Photo capture ----
+  // ---- Photo capture (in due passi: scegli foto -> scrivi Power Message -> invia) ----
   el('takePhotoBtn').addEventListener('click', () => el('photoInput').click());
 
   el('photoInput').addEventListener('change', (e) => {
@@ -187,11 +195,27 @@
       const preview = el('photoPreview');
       preview.src = dataUrl;
       preview.classList.add('show');
-      if (tableId) {
-        socket.emit('submit-photo', { tableId, dataUrl, lang });
-        showToast('📸 ' + T('photosSent'));
-      }
+      el('sendPhotoBtn').style.display = 'block';
+      el('powerMessageInput').focus();
     });
+  });
+
+  el('sendPhotoBtn').addEventListener('click', async () => {
+    if (!tableId || !pendingPhotoDataUrl) return;
+    const message = el('powerMessageInput').value.trim();
+    if (!message) {
+      showToast(T('powerMessageRequired'));
+      el('powerMessageInput').focus();
+      return;
+    }
+    const finalDataUrl = await bakeCaption(pendingPhotoDataUrl, message);
+    socket.emit('submit-photo', { tableId, dataUrl: finalDataUrl, lang });
+    showToast('📸 ' + T('photosSent'));
+    pendingPhotoDataUrl = null;
+    el('photoPreview').classList.remove('show');
+    el('powerMessageInput').value = '';
+    el('photoInput').value = '';
+    el('sendPhotoBtn').style.display = 'none';
   });
 
   function compressImage(file, maxDim, quality) {
@@ -217,11 +241,79 @@
     });
   }
 
+  // Disegna il Power Message come parte integrante dei pixel della foto (barra in basso)
+  function bakeCaption(dataUrl, message) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        const barHeight = Math.max(40, Math.round(img.height * 0.18));
+        const grad = ctx.createLinearGradient(0, img.height - barHeight, 0, img.height);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.75)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, img.height - barHeight, img.width, barHeight);
+
+        const fontSize = Math.max(15, Math.round(img.width * 0.055));
+        ctx.font = `700 ${fontSize}px Segoe UI, Arial`;
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        const maxWidth = img.width * 0.92;
+        const lines = wrapText(ctx, message, maxWidth, 2);
+        const lineHeight = fontSize * 1.2;
+        let y = img.height - Math.round(barHeight * 0.18);
+        for (let i = lines.length - 1; i >= 0; i--) {
+          ctx.fillText(lines[i], img.width / 2, y);
+          y -= lineHeight;
+        }
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
+  function wrapText(ctx, text, maxWidth, maxLines) {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let current = '';
+    for (const w of words) {
+      const test = current ? current + ' ' + w : w;
+      if (ctx.measureText(test).width > maxWidth && current) {
+        lines.push(current);
+        current = w;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    if (lines.length > maxLines) {
+      lines.length = maxLines;
+      let last = lines[maxLines - 1] + '…';
+      while (ctx.measureText(last).width > maxWidth && last.length > 1) {
+        last = last.slice(0, -2) + '…';
+      }
+      lines[maxLines - 1] = last;
+    }
+    return lines;
+  }
+
   el('changeTableBtn').addEventListener('click', () => {
     tableId = null;
     localStorage.removeItem('if25_table');
     el('tableSelectCard').style.display = 'block';
     el('mainContent').style.display = 'none';
+    pendingPhotoDataUrl = null;
+    el('photoPreview').classList.remove('show');
+    el('powerMessageInput').value = '';
+    el('photoInput').value = '';
+    el('sendPhotoBtn').style.display = 'none';
     renderTableGrid();
   });
 
@@ -251,6 +343,15 @@
   socket.on('reset', () => {
     localStorage.removeItem('if25_table');
     location.reload();
+  });
+  socket.on('final-image', (payload) => {
+    el('finalImageImg').src = payload.dataUrl;
+    el('finalImageSaveBtn').href = payload.dataUrl;
+    el('finalImageOverlay').classList.add('show');
+  });
+
+  el('finalImageCloseBtn').addEventListener('click', () => {
+    el('finalImageOverlay').classList.remove('show');
   });
 
   // ---- init ----

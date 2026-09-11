@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Idea Fresca 25 Anni — Regia</title>
+<link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="brand">IF <span>25</span> ANNI — Regia</div>
+    <div class="subtitle">Pannello di controllo · non è visibile sul maxischermo</div>
+  </div>
+
+  <div class="box" id="pinBox">
+    <h3>Sblocca il pannello</h3>
+    <input type="password" id="pinInput" placeholder="PIN Admin" inputmode="numeric" autocomplete="off" />
+    <button class="btn-primary" id="btnUnlock">Sblocca</button>
+    <div class="error-msg" id="pinError"></div>
+  </div>
+
+  <div id="controls" style="display:none; flex-direction:column; gap:16px;">
+
+    <div class="box">
+      <h3>Stato attuale</h3>
+      <div class="status-grid">
+        <div class="status-item"><div class="label">Fase</div><div class="value" id="stPhase" style="font-size:0.95rem;">—</div></div>
+        <div class="status-item"><div class="label">Tempo</div><div class="value" id="stTimer">30:00</div></div>
+        <div class="status-item"><div class="label">Tavoli inviati</div><div class="value" id="stTables">0/10</div></div>
+        <div class="status-item"><div class="label">Nuovi partner</div><div class="value" id="stNetwork">0</div></div>
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Timer</h3>
+      <div class="row">
+        <input type="number" id="durationInput" value="30" min="1" max="120" placeholder="Minuti" />
+        <button class="btn-primary" id="btnStart">Avvia</button>
+      </div>
+      <button class="btn-secondary" id="btnPauseResume">Pausa</button>
+    </div>
+
+    <div class="box">
+      <h3>Fasi dell'evento</h3>
+      <div class="phase-list" id="phaseList"></div>
+    </div>
+
+    <div class="box">
+      <h3>Esportazione</h3>
+      <button class="btn-secondary" id="btnSaveImage">Salva e invia a tutti i telefoni</button>
+      <div style="font-size:0.76rem; opacity:0.7;">
+        Scarica il PNG in alta qualità su questo dispositivo e, allo stesso tempo, mostra
+        l'immagine finale sul telefono di tutti i partecipanti ancora collegati.
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Zona pericolosa</h3>
+      <button class="btn-danger" id="btnReset">Reset completo dei dati</button>
+    </div>
+
+    <div class="lock-hint">Puoi chiudere questa pagina in sicurezza: i comandi restano protetti dal PIN.</div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/i18n.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

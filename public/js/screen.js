@@ -5,12 +5,12 @@
   const socket = io();
 
   let state = null;
-  let adminPin = '';
   let popQueue = [];
   let popBusy = false;
   let spotlightTimer = null;
   let spotlightIndex = 1;
   let rotateIndex = 0;
+  const mosaicIconTiles = {}; // tableId -> DOM element (icon placeholder tile, one per table)
 
   function fmt(n) { return Number(n || 0).toLocaleString('it-IT'); }
 
@@ -20,10 +20,6 @@
     el('lblSymbolic').textContent = window.t('it', 'screen.symbolicTotal');
     el('lblTables').textContent = window.t('it', 'screen.tablesIn');
     el('launchCta').textContent = window.t('it', 'screen.scanCta');
-    el('adminPinLabel').textContent = window.t('it', 'screen.adminPin');
-    el('btnStart').textContent = window.t('it', 'screen.startButton');
-    el('btnSaveImage').textContent = window.t('it', 'screen.saveImage');
-    el('btnReset').textContent = window.t('it', 'screen.resetButton');
   }
 
   function phaseLabel(phase) {
@@ -70,10 +66,11 @@
   function renderMosaicFromScratch() {
     const grid = el('mosaicGrid');
     grid.innerHTML = '';
+    Object.keys(mosaicIconTiles).forEach((k) => delete mosaicIconTiles[k]);
     let count = 0;
     Object.values(state.tables).forEach((t) => {
       (t.photos || []).forEach((p) => { addMosaicTile(p.dataUrl); count++; });
-      if ((!t.photos || !t.photos.length) && t.icon) { addMosaicIconTile(t.icon); count++; }
+      if ((!t.photos || !t.photos.length) && t.icon) { addMosaicIconTile(t.id, t.icon); count++; }
     });
     el('mosaicTitle').style.display = count > 6 ? 'none' : 'flex';
   }
@@ -86,11 +83,17 @@
     el('mosaicTitle').style.display = el('mosaicGrid').children.length > 6 ? 'none' : 'flex';
   }
 
-  function addMosaicIconTile(icon) {
+  function addMosaicIconTile(tableId, icon) {
+    if (mosaicIconTiles[tableId]) {
+      mosaicIconTiles[tableId].textContent = ICON_EMOJI[icon] || '✨';
+      return;
+    }
     const div = document.createElement('div');
     div.className = 'mosaic-tile icon-tile';
     div.textContent = ICON_EMOJI[icon] || '✨';
     el('mosaicGrid').appendChild(div);
+    mosaicIconTiles[tableId] = div;
+    el('mosaicTitle').style.display = el('mosaicGrid').children.length > 6 ? 'none' : 'flex';
   }
 
   // ---------- Photo pop queue ----------
@@ -194,18 +197,25 @@
   });
   socket.on('metrics:update', (payload) => {
     if (!state) return;
-    state.tables[payload.tableId] = payload.table;
+    // il server manda un riepilogo senza `photos`: uniamo per non perdere l'array locale
+    state.tables[payload.tableId] = Object.assign({}, state.tables[payload.tableId], payload.table);
     state.totals = payload.totals;
     renderTotals();
     renderTableCards();
   });
   socket.on('icon:update', (payload) => {
     if (!state) return;
-    state.tables[payload.tableId].icon = payload.icon;
+    const t = state.tables[payload.tableId];
+    if (!t) return;
+    const hadPhotos = t.photos && t.photos.length > 0;
+    t.icon = payload.icon;
     renderTableCards();
+    if (!hadPhotos) addMosaicIconTile(payload.tableId, payload.icon);
   });
   socket.on('photo:add', (payload) => {
     if (!state) return;
+    const t = state.tables[payload.tableId];
+    if (t) { if (!t.photos) t.photos = []; t.photos.push(payload.photo); }
     state.totals = payload.totals;
     renderTotals();
     enqueuePhotoPop(payload.tableId, payload.photo);
@@ -216,123 +226,6 @@
     fullRender();
   });
   socket.on('reset', () => location.reload());
-  socket.on('admin:error', (e) => { el('adminError').textContent = e.message; });
-
-  // ---------- Admin modal ----------
-  el('gearBtn').addEventListener('click', () => el('adminModal').classList.add('show'));
-  el('btnCloseAdmin').addEventListener('click', () => el('adminModal').classList.remove('show'));
-
-  function pin() { adminPin = el('adminPinInput').value; return adminPin; }
-
-  el('btnStart').addEventListener('click', () => {
-    const minutes = Number(el('durationInput').value) || 30;
-    socket.emit('admin', { pin: pin(), action: 'start', payload: { durationSec: minutes * 60 } });
-  });
-  el('btnPauseResume').addEventListener('click', () => {
-    const action = state && state.status === 'paused' ? 'resume' : 'pause';
-    socket.emit('admin', { pin: pin(), action });
-  });
-  el('btnReset').addEventListener('click', () => {
-    if (confirm('Confermi il reset completo di tutti i dati?')) {
-      socket.emit('admin', { pin: pin(), action: 'reset' });
-    }
-  });
-
-  const phaseBtnBox = el('phaseButtons');
-  const labels = window.t('it', 'screen.phaseLabels');
-  for (let i = 1; i <= 5; i++) {
-    const b = document.createElement('button');
-    b.className = 'admin-btn-secondary';
-    b.textContent = i + '. ' + labels[i];
-    b.style.fontSize = '0.72rem';
-    b.onclick = () => socket.emit('admin', { pin: pin(), action: 'set-phase', payload: { phase: i } });
-    phaseBtnBox.appendChild(b);
-  }
-
-  el('btnSaveImage').addEventListener('click', composeAndDownloadImage);
-
-  async function composeAndDownloadImage() {
-    if (!state) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = 1600; canvas.height = 900;
-    const ctx = canvas.getContext('2d');
-    const grad = ctx.createRadialGradient(800, 200, 100, 800, 450, 900);
-    grad.addColorStop(0, '#12594f'); grad.addColorStop(1, '#06211d');
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, 1600, 900);
-
-    ctx.fillStyle = '#c79a2b';
-    ctx.font = '900 64px Segoe UI, Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('IF 25 ANNI — BEYOND', 800, 90);
-    ctx.font = '600 24px Segoe UI, Arial';
-    ctx.fillStyle = '#ffffffcc';
-    ctx.fillText('La nostra visione, costruita da tutti noi', 800, 128);
-
-    const t = state.totals;
-    ctx.font = '900 40px Segoe UI, Arial';
-    ctx.fillStyle = '#c79a2b';
-    ctx.fillText(`+${fmt(t.network)}`, 350, 200);
-    ctx.fillText(`${t.retention}%`, 800, 200);
-    ctx.fillText(`${fmt(t.symbolic)}`, 1250, 200);
-    ctx.font = '500 18px Segoe UI, Arial';
-    ctx.fillStyle = '#ffffffaa';
-    ctx.fillText('Nuovi Partner di Rete', 350, 228);
-    ctx.fillText('Fidelizzazione Media', 800, 228);
-    ctx.fillText("Azioni d'Impatto 25°", 1250, 228);
-
-    const photos = [];
-    Object.values(state.tables).forEach((tb) => (tb.photos || []).forEach((p) => photos.push(p.dataUrl)));
-    const sample = photos.slice(0, 96);
-    const cols = 12;
-    const cellW = 1600 / cols;
-    const rows = Math.ceil(sample.length / cols) || 1;
-    const gridTop = 270;
-    const gridH = 900 - gridTop - 60;
-    const cellH = Math.min(cellW, gridH / rows);
-
-    const imgs = await Promise.all(sample.map((src) => loadImage(src)));
-    imgs.forEach((img, i) => {
-      const x = (i % cols) * cellW;
-      const y = gridTop + Math.floor(i / cols) * cellH;
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(x + 2, y + 2, cellW - 4, cellH - 4);
-      ctx.clip();
-      drawCover(ctx, img, x + 2, y + 2, cellW - 4, cellH - 4);
-      ctx.restore();
-    });
-
-    ctx.font = '500 16px Segoe UI, Arial';
-    ctx.fillStyle = '#ffffff99';
-    ctx.fillText('Idea Fresca · Digital Vision Mosaic & Numbers Quest · ' + new Date().toLocaleDateString('it-IT'), 800, 880);
-
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'idea-fresca-25-anni-vision.png';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
-    }, 'image/png');
-  }
-
-  function loadImage(src) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
-      img.src = src;
-    });
-  }
-
-  function drawCover(ctx, img, x, y, w, h) {
-    if (!img) return;
-    const ir = img.width / img.height;
-    const r = w / h;
-    let sw, sh, sx, sy;
-    if (ir > r) { sh = img.height; sw = sh * r; sx = (img.width - sw) / 2; sy = 0; }
-    else { sw = img.width; sh = sw / r; sx = 0; sy = (img.height - sh) / 2; }
-    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
-  }
 
   renderTopLabels();
 })();

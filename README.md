@@ -6,12 +6,18 @@ Nessuna installazione: i partecipanti scansionano un QR Code e usano il browser 
 ## Come funziona
 
 - **Partecipanti** (`/`): scelgono il tavolo (1–10), inseriscono i 3 numeri chiave della visione
-  2027–2028 e caricano il selfie di squadra (o un'icona simbolica). Interfaccia automatica in
-  IT/DE/FR/ES (rilevata dalla lingua del telefono, cambiabile a mano).
+  2027–2028 e caricano il selfie di squadra (o un'icona simbolica). Ogni foto richiede un
+  **Power Message** obbligatorio: una frase che viene disegnata direttamente sui pixel della
+  foto (non solo salvata a parte), quindi appare sempre insieme allo scatto ovunque venga
+  mostrato — pop-up, mosaico, immagine finale. Interfaccia automatica in IT/DE/FR/ES (rilevata
+  dalla lingua del telefono, cambiabile a mano).
 - **Schermo grande** (`/screen`): mostra il QR e il countdown, poi il flusso live dei numeri e
   delle foto, l'assemblaggio del mosaico e il reveal finale con le 10 Vision Card e i totali
-  aggregati. Include un pannello admin (icona ⚙, PIN) per avviare/mettere in pausa il timer,
-  cambiare fase manualmente, resettare i dati e salvare l'immagine finale.
+  aggregati. È una vista **di sola visualizzazione**, senza alcun controllo — pensata per essere
+  proiettata davanti a tutti senza mostrare pulsanti o PIN.
+- **Pannello di regia** (`/admin`): pagina separata, protetta da PIN, da aprire sul **tuo
+  telefono o laptop personale** (non sul maxischermo). Da qui avvii/metti in pausa il timer,
+  cambi fase manualmente, resetti i dati e scarichi l'immagine finale.
 
 Tutto è **in tempo reale** (Socket.IO): quando un tavolo invia i numeri o una foto, lo schermo
 grande e i telefoni di tutti gli altri si aggiornano istantaneamente.
@@ -55,18 +61,23 @@ $env:PORT=3000; $env:ADMIN_PIN=1234; npm start
 
 ## Uso durante l'evento
 
-1. Prima dell'evento: lancia il server sul PC regia, apri `/screen` sul maxischermo.
+1. Prima dell'evento: lancia il server sul PC regia, apri `/screen` sul maxischermo, e apri
+   `/admin` sul tuo telefono/laptop personale (inserisci il PIN admin per sbloccare i comandi).
 2. Proietta il QR (fase "Lancio"): gli 80 partecipanti scansionano ed entrano su `/`.
-3. Dal pannello admin (⚙ sullo schermo, PIN richiesto) premi **Avvia** per far partire il
-   countdown di 30 minuti (durata configurabile) e passare alla fase "Sfida Numerica".
+3. Dal pannello `/admin` premi **Avvia** per far partire il countdown (durata configurabile) e
+   passare alla fase "Sfida Numerica" — nulla di questo è visibile sul maxischermo.
 4. I tavoli inseriscono i numeri e caricano le foto dai propri telefoni: tutto appare live sul
    maxischermo (contatori che salgono, foto che appaiono e si aggiungono al mosaico).
-5. Usa i pulsanti di fase nel pannello admin per passare a "Assemblaggio" e infine
-   "Vision Reveal" (attiva lo zoom a spirale sulle 10 card e il banner finale).
-6. Premi **Salva immagine** per scaricare un PNG riassuntivo (mosaico + numeri totali) da
-   condividere via WhatsApp/email con tutti gli 80 partecipanti.
-7. **Reset** cancella tutti i dati per una nuova sessione (es. prova generale prima dell'evento
-   vero).
+5. Usa i pulsanti di fase nel pannello `/admin` per passare a "Assemblaggio" e infine
+   "Vision Reveal" (attiva lo zoom a spirale sulle 10 card e il banner finale). Il countdown a
+   30 minuti si ferma da solo a 00:00 ma **non cambia fase automaticamente**: sei sempre tu a
+   decidere quando far avanzare l'evento.
+6. Dal pannello `/admin` premi **Salva e invia a tutti i telefoni**: scarica un PNG in alta
+   qualità sul tuo dispositivo (mosaico + numeri totali) e, allo stesso tempo, mostra
+   l'immagine finale direttamente sul telefono di tutti i partecipanti ancora collegati, con un
+   pulsante per salvarla — non serve raccogliere email o numeri di nessuno.
+7. **Reset completo dei dati** (sempre da `/admin`) cancella tutto per una nuova sessione
+   (es. prova generale prima dell'evento vero).
 
 ## Pubblicare online su Render (nessuna installazione di Git richiesta)
 
@@ -101,7 +112,9 @@ connessione internet.
 **3. Il giorno dell'evento**
 
 - Apri `https://<il-tuo-indirizzo>.onrender.com/screen` sul PC collegato al proiettore.
-- Il QR mostrato a schermo punterà già automaticamente all'indirizzo pubblico corretto.
+- Apri `https://<il-tuo-indirizzo>.onrender.com/admin` sul tuo telefono/laptop personale per i
+  comandi (PIN richiesto) — questa pagina non va mai proiettata.
+- Il QR mostrato su `/screen` punterà già automaticamente all'indirizzo pubblico corretto.
 - Qualunque partecipante può scansionarlo e partecipare da qualsiasi rete (dati mobili inclusi).
 
 **⚠️ Importante — piano gratuito Render**: il piano free "si addormenta" dopo ~15 minuti di

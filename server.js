@@ -116,13 +116,27 @@ function buildPublicUrl(req) {
 const app = express();
 app.set('trust proxy', true); // rispetta X-Forwarded-Proto quando l'app gira dietro il proxy HTTPS di Render
 const server = http.createServer(app);
-const io = new Server(server, { maxHttpBufferSize: 5 * 1024 * 1024 });
+const io = new Server(server, { maxHttpBufferSize: 10 * 1024 * 1024 });
+
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+      "img-src 'self' data: blob:; connect-src 'self' ws: wss:; " +
+      "base-uri 'self'; object-src 'none'; frame-ancestors 'self';"
+  );
+  next();
+});
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/screen', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'screen.html'));
+});
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 app.get('/api/state', (req, res) => {
@@ -190,7 +204,7 @@ io.on('connection', (socket) => {
 
   socket.on('admin', ({ pin, action, payload }) => {
     if (pin !== ADMIN_PIN) {
-      socket.emit('admin:error', { message: 'PIN errato' });
+      socket.emit('admin:error', { message: 'PIN errato', code: 'bad_pin' });
       return;
     }
     switch (action) {
@@ -227,6 +241,15 @@ io.on('connection', (socket) => {
         state = freshState();
         io.emit('reset');
         io.emit('init', fullStatePayload());
+        return;
+      }
+      case 'broadcast-image': {
+        const dataUrl = payload && payload.dataUrl;
+        if (!dataUrl || !/^data:image\/jpeg;base64,/.test(dataUrl) || dataUrl.length > 8 * 1024 * 1024) {
+          socket.emit('admin:error', { message: 'Immagine non valida o troppo pesante', code: 'invalid_image' });
+          return;
+        }
+        io.emit('final-image', { dataUrl, ts: Date.now() });
         return;
       }
       default:
