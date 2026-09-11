@@ -129,7 +129,12 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: '2mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  lastModified: true,
+  maxAge: 0,
+  setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'),
+}));
 
 app.get('/screen', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'screen.html'));
