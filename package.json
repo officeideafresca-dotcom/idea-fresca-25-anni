@@ -1,0 +1,17 @@
+{
+  "name": "idea-fresca-25-anni",
+  "version": "1.0.0",
+  "description": "Digital Vision Mosaic & Numbers Quest - Web App per il retreat dei 25 anni di Idea Fresca",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "qrcode": "^1.5.3",
+    "socket.io": "^4.7.5"
+  }
+}

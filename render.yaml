@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: idea-fresca-25-anni
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/state
+    envVars:
+      - key: ADMIN_PIN
+        sync: false
