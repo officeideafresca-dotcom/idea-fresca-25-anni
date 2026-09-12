@@ -189,9 +189,34 @@
     updateRevealMode();
   }
 
+  // ---------- Effetti di transizione fase ----------
+  let lastKnownPhase = null;
+
+  function triggerFlash(kind) {
+    const flash = el('flashOverlay');
+    flash.className = 'flash-overlay'; // reset per poter ri-triggerare l'animazione
+    void flash.offsetWidth; // forza il reflow
+    flash.className = `flash-overlay show ${kind}`;
+  }
+
+  function triggerAssemble() {
+    const grid = el('mosaicGrid');
+    grid.classList.remove('assembling');
+    void grid.offsetWidth;
+    grid.classList.add('assembling');
+    triggerFlash('gold');
+  }
+
+  function onPhaseChanged(newPhase, oldPhase) {
+    if (oldPhase == null) return; // primo caricamento pagina: non è una transizione da segnalare
+    if (newPhase === 4 && oldPhase !== 4) triggerAssemble();
+    if (newPhase === 5 && oldPhase !== 5) triggerFlash('white');
+  }
+
   // ---------- Socket events ----------
   socket.on('init', (st) => {
     state = st;
+    lastKnownPhase = st.phase;
     fullRender();
     renderMosaicFromScratch();
   });
@@ -222,8 +247,11 @@
   });
   socket.on('phase:update', (p) => {
     if (!state) return;
+    const oldPhase = lastKnownPhase;
     Object.assign(state, p);
+    lastKnownPhase = p.phase;
     fullRender();
+    onPhaseChanged(p.phase, oldPhase);
   });
   socket.on('reset', () => location.reload());
 

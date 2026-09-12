@@ -108,6 +108,14 @@ html, body {
   padding: 10px;
   overflow-y: auto;
   align-content: flex-start;
+  transform-origin: center center;
+}
+.mosaic-grid.assembling { animation: mosaicAssemble 1.9s ease; }
+@keyframes mosaicAssemble {
+  0% { transform: scale(0.82) rotate(-2deg); filter: brightness(1.7) saturate(1.4); }
+  35% { transform: scale(1.06) rotate(1.5deg); }
+  65% { transform: scale(0.97) rotate(-0.8deg); }
+  100% { transform: scale(1) rotate(0deg); filter: brightness(1) saturate(1); }
 }
 .mosaic-tile {
   width: 100%; height: 100%;
@@ -148,6 +156,21 @@ html, body {
 .photo-pop .leader-name { font-size: 1.8rem; font-weight: 800; }
 .photo-pop .table-tag { font-size: 1.1rem; color: var(--if-gold); font-weight: 700; }
 
+/* ---------- Flash di transizione fase ---------- */
+.flash-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 90;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.9), rgba(199,154,43,0.4) 60%, transparent 80%);
+}
+.flash-overlay.show { animation: flashFade 0.8s ease; }
+.flash-overlay.show.gold { background: radial-gradient(circle, rgba(199,154,43,0.85), transparent 75%); }
+.flash-overlay.show.white { background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(199,154,43,0.55) 55%, transparent 80%); }
+@keyframes flashFade {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ---------- Launch overlay (phase 0/1) ---------- */
 .launch-overlay {
   position: fixed; inset: 0;
@@ -165,8 +188,19 @@ html, body {
 .launch-overlay .big-timer { font-size: 4rem; font-weight: 900; color: var(--if-gold); font-variant-numeric: tabular-nums; }
 
 /* ---------- Reveal mode ---------- */
-.screen.reveal .side-col { opacity: 0.4; }
-.screen.reveal .mosaic-title { color: rgba(199,154,43,0.28); font-size: 9rem; }
+.screen.reveal .side-col { opacity: 0.35; transition: opacity 0.6s ease; }
+.screen.reveal .mosaic-title {
+  color: rgba(199,154,43,0.4);
+  font-size: 11rem;
+  transition: color 0.6s ease, font-size 0.6s ease;
+  text-shadow: 0 0 60px rgba(199,154,43,0.5);
+}
+.reveal-banner { animation: bannerPop 0.6s ease; }
+@keyframes bannerPop {
+  0% { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
 .reveal-banner {
   text-align: center;
   padding: 10px 20px 0;

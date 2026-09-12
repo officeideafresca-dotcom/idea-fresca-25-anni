@@ -17,6 +17,7 @@ function makeTable(id) {
   return {
     id,
     teamLeaderName: '',
+    leaderDeviceId: null, // solo questo dispositivo può inserire/modificare i numeri del tavolo
     lang: null,
     color: TABLE_COLORS[(id - 1) % TABLE_COLORS.length],
     icon: null,
@@ -70,6 +71,7 @@ function publicTableSummary(t) {
   return {
     id: t.id,
     teamLeaderName: t.teamLeaderName,
+    leaderDeviceId: t.leaderDeviceId,
     lang: t.lang,
     color: t.color,
     icon: t.icon,
@@ -170,9 +172,34 @@ io.on('connection', (socket) => {
     socket.emit('init', fullStatePayload());
   });
 
-  socket.on('submit-metrics', ({ tableId, teamLeaderName, lang, metrics }) => {
+  socket.on('claim-leader', ({ tableId, deviceId, name }) => {
+    const t = state.tables[tableId];
+    if (!t || !deviceId) return;
+    if (t.leaderDeviceId && t.leaderDeviceId !== deviceId) {
+      socket.emit('leader:claim-error', { tableId, message: 'Questo tavolo ha già un Team Leader' });
+      return;
+    }
+    t.leaderDeviceId = deviceId;
+    if (name) t.teamLeaderName = String(name).slice(0, 60);
+    t.updatedAt = Date.now();
+    io.emit('leader:update', { tableId: t.id, leaderDeviceId: t.leaderDeviceId, teamLeaderName: t.teamLeaderName });
+  });
+
+  socket.on('release-leader', ({ tableId, deviceId }) => {
+    const t = state.tables[tableId];
+    if (!t || t.leaderDeviceId !== deviceId) return;
+    t.leaderDeviceId = null;
+    t.updatedAt = Date.now();
+    io.emit('leader:update', { tableId: t.id, leaderDeviceId: null, teamLeaderName: t.teamLeaderName });
+  });
+
+  socket.on('submit-metrics', ({ tableId, deviceId, teamLeaderName, lang, metrics }) => {
     const t = state.tables[tableId];
     if (!t || !metrics) return;
+    if (!t.leaderDeviceId || t.leaderDeviceId !== deviceId) {
+      socket.emit('leader:claim-error', { tableId, message: 'Solo il Team Leader del tavolo può inserire i numeri' });
+      return;
+    }
     t.teamLeaderName = String(teamLeaderName || t.teamLeaderName || '').slice(0, 60);
     if (lang) t.lang = lang;
     t.metrics = {
