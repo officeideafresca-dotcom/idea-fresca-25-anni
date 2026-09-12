@@ -5,9 +5,11 @@ Nessuna installazione: i partecipanti scansionano un QR Code e usano il browser 
 
 ## Come funziona
 
-- **Partecipanti** (`/`): scelgono il tavolo (1–10), inseriscono i 3 numeri chiave della visione
-  2027–2028 e caricano il selfie di squadra (o un'icona simbolica). Ogni foto richiede un
-  **Power Message** obbligatorio: una frase che viene disegnata direttamente sui pixel della
+- **Partecipanti** (`/`): scelgono il tavolo (1–10). **Solo la prima persona che si dichiara
+  "Team Leader" per quel tavolo** può inserire/modificare i 3 numeri chiave della visione
+  2027–2028 (bloccato anche lato server, non solo nell'interfaccia) — tutti gli altri al tavolo
+  vedono i numeri in sola lettura, ma possono comunque caricare foto e icone. Ogni foto richiede
+  un **Power Message** obbligatorio: una frase che viene disegnata direttamente sui pixel della
   foto (non solo salvata a parte), quindi appare sempre insieme allo scatto ovunque venga
   mostrato — pop-up, mosaico, immagine finale. Interfaccia automatica in IT/DE/FR/ES (rilevata
   dalla lingua del telefono, cambiabile a mano).

@@ -35,32 +35,49 @@
         <h2 id="metricsTitle">I Numeri: la Visione 2027–2028</h2>
         <p class="subtitle" id="metricsSubtitle">Discutete al tavolo e inserite i 3 numeri chiave entro 7 minuti</p>
 
-        <label id="leaderNameLabel">Nome del Team Leader</label>
-        <input type="text" id="leaderName" placeholder="" />
-
-        <label id="metric1Label">Il Moltiplicatore di Rete</label>
-        <p class="help-text" id="metric1Help"></p>
-        <div class="metric-row">
-          <input type="number" id="metric1" min="0" step="1" />
-          <span class="metric-unit" id="metric1Unit"></span>
+        <!-- Nessuno ha ancora rivendicato il ruolo di Team Leader per questo tavolo -->
+        <div id="leaderClaimBox">
+          <p class="help-text" id="claimExplainText">Solo una persona per tavolo inserisce i numeri.</p>
+          <input type="text" id="claimNameInput" placeholder="" />
+          <button class="btn" id="claimLeaderBtn">Sono io il Team Leader</button>
         </div>
 
-        <label id="metric2Label">Target di Fidelizzazione</label>
-        <p class="help-text" id="metric2Help"></p>
-        <div class="metric-row">
-          <input type="number" id="metric2" min="0" max="100" step="1" />
-          <span class="metric-unit" id="metric2Unit"></span>
+        <!-- Questo dispositivo è il Team Leader: form completo -->
+        <div id="leaderFormBox" style="display:none;">
+          <label id="leaderNameLabel">Nome del Team Leader</label>
+          <input type="text" id="leaderName" placeholder="" />
+
+          <label id="metric1Label">Il Moltiplicatore di Rete</label>
+          <p class="help-text" id="metric1Help"></p>
+          <div class="metric-row">
+            <input type="number" id="metric1" min="0" step="1" />
+            <span class="metric-unit" id="metric1Unit"></span>
+          </div>
+
+          <label id="metric2Label">Target di Fidelizzazione</label>
+          <p class="help-text" id="metric2Help"></p>
+          <div class="metric-row">
+            <input type="number" id="metric2" min="0" max="100" step="1" />
+            <span class="metric-unit" id="metric2Unit"></span>
+          </div>
+
+          <label id="metric3Label">Il Numero Simbolico del 25°</label>
+          <p class="help-text" id="metric3Help"></p>
+          <div class="metric-row">
+            <input type="number" id="metric3Value" min="0" step="1" style="max-width:110px;" />
+            <input type="text" id="metric3Label_" placeholder="" />
+          </div>
+
+          <button class="btn" id="submitMetricsBtn">Invia i numeri del tavolo</button>
+          <div class="saved-note" id="metricsSavedNote">Numeri inviati!</div>
+          <button class="btn secondary" id="releaseLeaderBtn" style="margin-top:16px; font-size:0.8rem;">Non sei tu? Cambia Team Leader</button>
         </div>
 
-        <label id="metric3Label">Il Numero Simbolico del 25°</label>
-        <p class="help-text" id="metric3Help"></p>
-        <div class="metric-row">
-          <input type="number" id="metric3Value" min="0" step="1" style="max-width:110px;" />
-          <input type="text" id="metric3Label_" placeholder="" />
+        <!-- Un altro dispositivo è già il Team Leader: sola lettura -->
+        <div id="leaderReadonlyBox" style="display:none;">
+          <p class="help-text" id="readonlyLeaderText"></p>
+          <div class="live-ticker" id="readonlyMetricsBox" style="margin-top:10px;"></div>
         </div>
-
-        <button class="btn" id="submitMetricsBtn">Invia i numeri del tavolo</button>
-        <div class="saved-note" id="metricsSavedNote">Numeri inviati!</div>
       </div>
 
       <div class="card" id="photoCard">

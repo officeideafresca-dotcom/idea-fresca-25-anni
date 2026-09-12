@@ -9,6 +9,11 @@
   let selectedIcon = null;
   let pendingPhotoDataUrl = null;
   let latestState = null;
+  let deviceId = localStorage.getItem('if25_device_id');
+  if (!deviceId) {
+    deviceId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem('if25_device_id', deviceId);
+  }
 
   const el = (id) => document.getElementById(id);
   const socket = io();
@@ -20,6 +25,10 @@
     toast.textContent = msg;
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
   function renderLangSwitch() {
@@ -43,6 +52,10 @@
     el('changeTableBtn').textContent = T('changeTable');
     el('metricsTitle').textContent = T('metricsTitle');
     el('metricsSubtitle').textContent = T('metricsSubtitle');
+    el('claimExplainText').textContent = T('claimExplainText');
+    el('claimNameInput').placeholder = T('leaderNamePlaceholder');
+    el('claimLeaderBtn').textContent = T('claimLeaderBtn');
+    el('releaseLeaderBtn').textContent = T('releaseLeaderBtn');
     el('leaderNameLabel').textContent = T('leaderNameLabel');
     el('leaderName').placeholder = T('leaderNamePlaceholder');
     el('metric1Label').textContent = T('metric1Label');
@@ -78,6 +91,7 @@
     renderTableGrid();
     updateStatusBadge();
     updatePhotoCount();
+    renderLeaderSection();
   }
 
   function renderTableGrid() {
@@ -134,6 +148,46 @@
     if (t.icon) selectedIcon = t.icon;
     renderIconGrid();
     updatePhotoCount(t.photosCount);
+    renderLeaderSection();
+  }
+
+  // Mostra: box "rivendica il ruolo" / form completo (se sono il leader) / sola lettura (se lo è un altro)
+  function renderLeaderSection() {
+    if (!tableId || !latestState) return;
+    const t = latestState.tables[tableId];
+    if (!t) return;
+    const claimBox = el('leaderClaimBox');
+    const formBox = el('leaderFormBox');
+    const readonlyBox = el('leaderReadonlyBox');
+
+    if (!t.leaderDeviceId) {
+      claimBox.style.display = 'block';
+      formBox.style.display = 'none';
+      readonlyBox.style.display = 'none';
+    } else if (t.leaderDeviceId === deviceId) {
+      claimBox.style.display = 'none';
+      formBox.style.display = 'block';
+      readonlyBox.style.display = 'none';
+    } else {
+      claimBox.style.display = 'none';
+      formBox.style.display = 'none';
+      readonlyBox.style.display = 'block';
+      const name = t.teamLeaderName || '';
+      el('readonlyLeaderText').textContent = name
+        ? T('leaderManagedBy').replace('{name}', name)
+        : T('leaderManagedByUnknown');
+      const box = el('readonlyMetricsBox');
+      if (t.metrics) {
+        const m = t.metrics;
+        box.innerHTML = `
+          <div class="stat"><span>${escapeHtml(T('metric1Label'))}</span><b>+${m.network}</b></div>
+          <div class="stat"><span>${escapeHtml(T('metric2Label'))}</span><b>${m.retention}%</b></div>
+          <div class="stat"><span>${escapeHtml(T('metric3Label'))}</span><b>${m.symbolicValue} ${escapeHtml(m.symbolicLabel || '')}</b></div>
+        `;
+      } else {
+        box.innerHTML = `<div class="stat"><span>${escapeHtml(T('metricsPending'))}</span></div>`;
+      }
+    }
   }
 
   function updatePhotoCount(count) {
@@ -170,6 +224,24 @@
     el('lt4Value').textContent = `${t.tablesSubmitted} / ${t.tablesTotal}`;
   }
 
+  // ---- Rivendicazione ruolo Team Leader ----
+  el('claimLeaderBtn').addEventListener('click', () => {
+    if (!tableId) return;
+    const name = el('claimNameInput').value.trim();
+    if (!name) {
+      showToast(T('leaderNameRequired'));
+      el('claimNameInput').focus();
+      return;
+    }
+    socket.emit('claim-leader', { tableId, deviceId, name });
+  });
+
+  el('releaseLeaderBtn').addEventListener('click', () => {
+    if (!tableId) return;
+    if (!confirm(T('releaseLeaderConfirm'))) return;
+    socket.emit('release-leader', { tableId, deviceId });
+  });
+
   // ---- Metrics submit ----
   el('submitMetricsBtn').addEventListener('click', () => {
     if (!tableId) return;
@@ -179,7 +251,7 @@
       symbolicValue: Number(el('metric3Value').value) || 0,
       symbolicLabel: el('metric3Label_').value || '',
     };
-    socket.emit('submit-metrics', { tableId, teamLeaderName: el('leaderName').value, lang, metrics });
+    socket.emit('submit-metrics', { tableId, deviceId, teamLeaderName: el('leaderName').value, lang, metrics });
     el('metricsSavedNote').classList.add('show');
     showToast(T('metricsSaved'));
   });
@@ -327,6 +399,7 @@
   socket.on('metrics:update', (payload) => {
     if (latestState) { latestState.tables[payload.tableId] = payload.table; latestState.totals = payload.totals; }
     updateLiveTicker();
+    if (String(payload.tableId) === String(tableId)) renderLeaderSection();
   });
   socket.on('photo:add', (payload) => {
     if (latestState && latestState.tables[payload.tableId]) {
@@ -335,6 +408,18 @@
     }
     updateLiveTicker();
     if (String(payload.tableId) === String(tableId)) updatePhotoCount(payload.photosCount);
+  });
+  socket.on('leader:update', (payload) => {
+    if (latestState && latestState.tables[payload.tableId]) {
+      latestState.tables[payload.tableId].leaderDeviceId = payload.leaderDeviceId;
+      latestState.tables[payload.tableId].teamLeaderName = payload.teamLeaderName;
+    }
+    if (String(payload.tableId) === String(tableId)) renderLeaderSection();
+  });
+  socket.on('leader:claim-error', (payload) => {
+    if (String(payload.tableId) !== String(tableId)) return;
+    showToast(T('leaderClaimError'));
+    renderLeaderSection();
   });
   socket.on('phase:update', (p) => {
     if (latestState) Object.assign(latestState, p);
