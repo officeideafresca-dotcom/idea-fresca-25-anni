@@ -173,7 +173,7 @@
       const cellW = gridW / cols;
       const cellH = gridH / rows;
 
-      const lum = buildTextLuminanceGrid('IF 25', gridW, gridH, cols, rows);
+      const lum = buildTextLuminanceGrid(['IDEA FRESCA', '25'], gridW, gridH, cols, rows);
 
       // mescoliamo le foto: con poche decine di scatti verranno riusate più volte,
       // lo shuffle evita pattern ripetitivi troppo regolari e visibili
@@ -218,9 +218,10 @@
     return canvas;
   }
 
-  // Rasterizza `text` e restituisce una griglia cols x rows di luminosità 0..1
-  // (1 = dentro una lettera, 0 = sfondo) usata per "dipingere" il fotomosaico.
-  function buildTextLuminanceGrid(text, width, height, cols, rows) {
+  // Rasterizza una o più righe di testo e restituisce una griglia cols x rows di
+  // luminosità 0..1 (1 = dentro una lettera, 0 = sfondo) per "dipingere" il fotomosaico.
+  function buildTextLuminanceGrid(lines, width, height, cols, rows) {
+    if (!Array.isArray(lines)) lines = [lines];
     const off = document.createElement('canvas');
     off.width = width; off.height = height;
     const octx = off.getContext('2d');
@@ -229,13 +230,17 @@
     octx.fillStyle = '#fff';
     octx.textAlign = 'center';
     octx.textBaseline = 'middle';
-    let fontSize = Math.round(height * 0.85);
-    octx.font = `900 ${fontSize}px Segoe UI, Arial`;
-    while (octx.measureText(text).width > width * 0.94 && fontSize > 10) {
-      fontSize -= 4;
+
+    const lineHeight = height / lines.length;
+    lines.forEach((line, i) => {
+      let fontSize = Math.round(lineHeight * 0.8);
       octx.font = `900 ${fontSize}px Segoe UI, Arial`;
-    }
-    octx.fillText(text, width / 2, height / 2);
+      while (octx.measureText(line).width > width * 0.94 && fontSize > 10) {
+        fontSize -= 4;
+        octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+      }
+      octx.fillText(line, width / 2, lineHeight * i + lineHeight / 2);
+    });
 
     const full = octx.getImageData(0, 0, width, height).data;
     const cellW = width / cols, cellH = height / rows;
