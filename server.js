@@ -281,7 +281,9 @@ io.on('connection', (socket) => {
           socket.emit('admin:error', { message: 'Immagine non valida o troppo pesante', code: 'invalid_image' });
           return;
         }
+        const recipientCount = io.sockets.sockets.size;
         io.emit('final-image', { dataUrl, ts: Date.now() });
+        socket.emit('broadcast-image:sent', { recipientCount });
         return;
       }
       default:

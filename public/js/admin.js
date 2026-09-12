@@ -60,6 +60,11 @@
   socket.on('photo:add', (p) => { if (state) { state.totals = p.totals; renderStatus(); } });
   socket.on('phase:update', (p) => { if (state) { Object.assign(state, p); renderStatus(); } });
   socket.on('reset', () => socket.emit('request-state'));
+  socket.on('broadcast-image:sent', (p) => {
+    const status = el('exportStatus');
+    status.textContent = `Inviata a ${p.recipientCount} dispositivi collegati ✓`;
+    setTimeout(() => { status.textContent = ''; }, 6000);
+  });
   socket.on('admin:error', (e) => {
     if (e.code === 'bad_pin') {
       el('pinError').textContent = e.message;
