@@ -100,21 +100,30 @@
   el('btnSaveImage').addEventListener('click', composeSaveAndBroadcastImage);
 
   async function composeSaveAndBroadcastImage() {
-    const canvas = await buildFinalCanvas();
-    if (!canvas) return;
+    const btn = el('btnSaveImage');
+    const originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Generazione in corso...';
+    try {
+      const canvas = await buildFinalCanvas();
+      if (!canvas) return;
 
-    // 1) scarica la versione PNG ad alta qualità su questo dispositivo
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'idea-fresca-25-anni-vision.png';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
-    }, 'image/png');
+      // 1) scarica la versione PNG ad alta qualità su questo dispositivo
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'idea-fresca-25-anni-vision.png';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      }, 'image/png');
 
-    // 2) invia una versione JPEG più leggera a tutti i telefoni ancora collegati
-    const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-    sendAdmin('broadcast-image', { dataUrl: jpegDataUrl });
+      // 2) invia una versione JPEG più leggera a tutti i telefoni ancora collegati
+      const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      sendAdmin('broadcast-image', { dataUrl: jpegDataUrl });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
   }
 
   async function buildFinalCanvas() {
@@ -148,31 +157,101 @@
 
     const photos = [];
     Object.values(state.tables).forEach((tb) => (tb.photos || []).forEach((p) => photos.push(p.dataUrl)));
-    const sample = photos.slice(0, 96);
-    const cols = 12;
-    const cellW = 1600 / cols;
-    const rows = Math.ceil(sample.length / cols) || 1;
     const gridTop = 270;
+    const gridW = 1600;
     const gridH = 900 - gridTop - 60;
-    const cellH = Math.min(cellW, gridH / rows);
 
-    const imgs = await Promise.all(sample.map((src) => loadImage(src)));
-    imgs.forEach((img, i) => {
-      const x = (i % cols) * cellW;
-      const y = gridTop + Math.floor(i / cols) * cellH;
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(x + 2, y + 2, cellW - 4, cellH - 4);
-      ctx.clip();
-      drawCover(ctx, img, x + 2, y + 2, cellW - 4, cellH - 4);
-      ctx.restore();
-    });
+    if (photos.length > 0) {
+      const cellSize = 22;
+      const cols = Math.max(20, Math.round(gridW / cellSize));
+      const rows = Math.max(10, Math.round(gridH / cellSize));
+      const cellW = gridW / cols;
+      const cellH = gridH / rows;
+
+      const lum = buildTextLuminanceGrid('IF 25', gridW, gridH, cols, rows);
+
+      // mescoliamo le foto: con poche decine di scatti verranno riusate più volte,
+      // lo shuffle evita pattern ripetitivi troppo regolari e visibili
+      const shuffled = photos.slice();
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const imgs = await Promise.all(shuffled.map((src) => loadImage(src)));
+
+      let idx = 0;
+      for (let ry = 0; ry < rows; ry++) {
+        for (let rx = 0; rx < cols; rx++) {
+          const img = imgs.length ? imgs[idx % imgs.length] : null;
+          idx++;
+          const x = rx * cellW;
+          const y = gridTop + ry * cellH;
+          if (img) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x, y, cellW, cellH);
+            ctx.clip();
+            drawCover(ctx, img, x, y, cellW, cellH);
+            ctx.restore();
+          }
+          // tinta in base alla mappa di luminosità del testo: lettera = quasi originale, sfondo = molto scurito
+          const isLetter = lum[ry][rx] > 0.5;
+          ctx.fillStyle = isLetter ? 'rgba(199,154,43,0.10)' : 'rgba(0,0,0,0.8)';
+          ctx.fillRect(x, y, cellW, cellH);
+        }
+      }
+    } else {
+      ctx.font = '600 22px Segoe UI, Arial';
+      ctx.fillStyle = '#ffffff88';
+      ctx.fillText('Nessuna foto ancora caricata', 800, gridTop + gridH / 2);
+    }
 
     ctx.font = '500 16px Segoe UI, Arial';
     ctx.fillStyle = '#ffffff99';
     ctx.fillText('Idea Fresca · Digital Vision Mosaic & Numbers Quest · ' + new Date().toLocaleDateString('it-IT'), 800, 880);
 
     return canvas;
+  }
+
+  // Rasterizza `text` e restituisce una griglia cols x rows di luminosità 0..1
+  // (1 = dentro una lettera, 0 = sfondo) usata per "dipingere" il fotomosaico.
+  function buildTextLuminanceGrid(text, width, height, cols, rows) {
+    const off = document.createElement('canvas');
+    off.width = width; off.height = height;
+    const octx = off.getContext('2d');
+    octx.fillStyle = '#000';
+    octx.fillRect(0, 0, width, height);
+    octx.fillStyle = '#fff';
+    octx.textAlign = 'center';
+    octx.textBaseline = 'middle';
+    let fontSize = Math.round(height * 0.85);
+    octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+    while (octx.measureText(text).width > width * 0.94 && fontSize > 10) {
+      fontSize -= 4;
+      octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+    }
+    octx.fillText(text, width / 2, height / 2);
+
+    const full = octx.getImageData(0, 0, width, height).data;
+    const cellW = width / cols, cellH = height / rows;
+    const grid = [];
+    for (let ry = 0; ry < rows; ry++) {
+      const row = [];
+      const y0 = Math.floor(ry * cellH), y1 = Math.max(y0 + 1, Math.floor((ry + 1) * cellH));
+      for (let rx = 0; rx < cols; rx++) {
+        const x0 = Math.floor(rx * cellW), x1 = Math.max(x0 + 1, Math.floor((rx + 1) * cellW));
+        let sum = 0, count = 0;
+        for (let y = y0; y < y1; y += 2) {
+          for (let x = x0; x < x1; x += 2) {
+            sum += full[(y * width + x) * 4];
+            count++;
+          }
+        }
+        row.push(count ? sum / count / 255 : 0);
+      }
+      grid.push(row);
+    }
+    return grid;
   }
 
   function loadImage(src) {
@@ -189,8 +268,9 @@
     const ir = img.width / img.height;
     const r = w / h;
     let sw, sh, sx, sy;
+    // foto verticali ritagliate: ancoriamo in basso, non al centro, per non tagliare il Power Message
     if (ir > r) { sh = img.height; sw = sh * r; sx = (img.width - sw) / 2; sy = 0; }
-    else { sw = img.width; sh = sw / r; sx = 0; sy = (img.height - sh) / 2; }
+    else { sw = img.width; sh = sw / r; sx = 0; sy = img.height - sh; }
     ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
   }
 

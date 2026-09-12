@@ -4,12 +4,15 @@
   const el = (id) => document.getElementById(id);
   const socket = io();
 
+  const PHOTO_REVEAL_PHASE = 3; // "Visual Challenge": prima di questa fase, foto/icone restano in coda
+
   let state = null;
   let popQueue = [];
   let popBusy = false;
   let spotlightTimer = null;
   let spotlightIndex = 1;
   let rotateIndex = 0;
+  let pendingMosaic = []; // { type: 'photo'|'icon', tableId, photo?, icon? } in attesa della fase giusta
   const mosaicIconTiles = {}; // tableId -> DOM element (icon placeholder tile, one per table)
 
   function fmt(n) { return Number(n || 0).toLocaleString('it-IT'); }
@@ -67,12 +70,33 @@
     const grid = el('mosaicGrid');
     grid.innerHTML = '';
     Object.keys(mosaicIconTiles).forEach((k) => delete mosaicIconTiles[k]);
+    pendingMosaic = [];
+
+    if (state.phase < PHOTO_REVEAL_PHASE) {
+      // Ancora prima della fase "Visual Challenge": teniamo tutto in coda, mosaico vuoto
+      Object.values(state.tables).forEach((t) => {
+        (t.photos || []).forEach((p) => pendingMosaic.push({ type: 'photo', tableId: t.id, photo: p }));
+        if ((!t.photos || !t.photos.length) && t.icon) pendingMosaic.push({ type: 'icon', tableId: t.id, icon: t.icon });
+      });
+      el('mosaicTitle').style.display = 'flex';
+      return;
+    }
+
     let count = 0;
     Object.values(state.tables).forEach((t) => {
       (t.photos || []).forEach((p) => { addMosaicTile(p.dataUrl); count++; });
       if ((!t.photos || !t.photos.length) && t.icon) { addMosaicIconTile(t.id, t.icon); count++; }
     });
     el('mosaicTitle').style.display = count > 6 ? 'none' : 'flex';
+  }
+
+  function flushPendingMosaic() {
+    const items = pendingMosaic;
+    pendingMosaic = [];
+    items.forEach((item) => {
+      if (item.type === 'photo') enqueuePhotoPop(item.tableId, item.photo);
+      else addMosaicIconTile(item.tableId, item.icon);
+    });
   }
 
   function addMosaicTile(dataUrl) {
@@ -209,6 +233,10 @@
 
   function onPhaseChanged(newPhase, oldPhase) {
     if (oldPhase == null) return; // primo caricamento pagina: non è una transizione da segnalare
+    if (newPhase >= PHOTO_REVEAL_PHASE && oldPhase < PHOTO_REVEAL_PHASE) {
+      triggerFlash('gold');
+      flushPendingMosaic();
+    }
     if (newPhase === 4 && oldPhase !== 4) triggerAssemble();
     if (newPhase === 5 && oldPhase !== 5) triggerFlash('white');
   }
@@ -235,7 +263,10 @@
     const hadPhotos = t.photos && t.photos.length > 0;
     t.icon = payload.icon;
     renderTableCards();
-    if (!hadPhotos) addMosaicIconTile(payload.tableId, payload.icon);
+    if (!hadPhotos) {
+      if (state.phase >= PHOTO_REVEAL_PHASE) addMosaicIconTile(payload.tableId, payload.icon);
+      else pendingMosaic.push({ type: 'icon', tableId: payload.tableId, icon: payload.icon });
+    }
   });
   socket.on('photo:add', (payload) => {
     if (!state) return;
@@ -243,7 +274,11 @@
     if (t) { if (!t.photos) t.photos = []; t.photos.push(payload.photo); }
     state.totals = payload.totals;
     renderTotals();
-    enqueuePhotoPop(payload.tableId, payload.photo);
+    if (state.phase >= PHOTO_REVEAL_PHASE) {
+      enqueuePhotoPop(payload.tableId, payload.photo);
+    } else {
+      pendingMosaic.push({ type: 'photo', tableId: payload.tableId, photo: payload.photo });
+    }
   });
   socket.on('phase:update', (p) => {
     if (!state) return;
