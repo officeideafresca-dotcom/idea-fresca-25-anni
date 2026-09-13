@@ -14,13 +14,15 @@ Nessuna installazione: i partecipanti scansionano un QR Code e usano il browser 
   mostrato — pop-up, mosaico, immagine finale. Interfaccia automatica in IT/DE/FR/ES (rilevata
   dalla lingua del telefono, cambiabile a mano).
 - **Schermo grande** (`/screen`): mostra il QR e il countdown, poi il flusso live dei numeri.
-  Le **foto e le icone restano "in coda"** (non compaiono) finché non passi manualmente alla
-  fase **"3. Visual Challenge"** dal pannello admin — anche se i tavoli le hanno già inviate
-  prima, durante "Sfida Numerica". Appena avanzi a quella fase, tutte le foto in attesa
-  compaiono in sequenza con l'effetto pop-up consueto. Poi l'assemblaggio del mosaico e il
-  reveal finale con le 10 Vision Card e i totali aggregati. È una vista **di sola
-  visualizzazione**, senza alcun controllo — pensata per essere proiettata davanti a tutti senza
-  mostrare pulsanti o PIN.
+  **Solo dopo aver premuto "Avvia"**, le foto e le icone restano "in coda" (non compaiono)
+  finché non passi manualmente alla fase **"3. Visual Challenge"** dal pannello admin — anche se
+  i tavoli le hanno già inviate prima, durante "Sfida Numerica". Appena avanzi a quella fase,
+  tutte le foto in attesa compaiono in sequenza con l'effetto pop-up consueto. **Prima di
+  premere "Avvia"** (mentre stai facendo una prova), le foto compaiono invece subito, senza
+  attese — utile per verificare rapidamente che tutto funzioni prima dell'evento vero. Poi
+  l'assemblaggio del mosaico e il reveal finale con le 10 Vision Card e i totali aggregati. È
+  una vista **di sola visualizzazione**, senza alcun controllo — pensata per essere proiettata
+  davanti a tutti senza mostrare pulsanti o PIN.
 - **Pannello di regia** (`/admin`): pagina separata, protetta da PIN, da aprire sul **tuo
   telefono o laptop personale** (non sul maxischermo). Da qui avvii/metti in pausa il timer,
   cambi fase manualmente, resetti i dati e scarichi l'immagine finale.

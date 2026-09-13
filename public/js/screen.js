@@ -66,13 +66,19 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
+  // Prima di premere "Avvia" (stato lobby) le foto vanno mostrate subito: è solo una prova.
+  // La sorpresa (foto nascoste) ha senso solo durante l'evento vero, fasi 1-2.
+  function shouldQueueMosaic() {
+    return state.status !== 'lobby' && state.phase < PHOTO_REVEAL_PHASE;
+  }
+
   function renderMosaicFromScratch() {
     const grid = el('mosaicGrid');
     grid.innerHTML = '';
     Object.keys(mosaicIconTiles).forEach((k) => delete mosaicIconTiles[k]);
     pendingMosaic = [];
 
-    if (state.phase < PHOTO_REVEAL_PHASE) {
+    if (shouldQueueMosaic()) {
       // Ancora prima della fase "Visual Challenge": teniamo tutto in coda, mosaico vuoto
       Object.values(state.tables).forEach((t) => {
         (t.photos || []).forEach((p) => pendingMosaic.push({ type: 'photo', tableId: t.id, photo: p }));
@@ -264,8 +270,8 @@
     t.icon = payload.icon;
     renderTableCards();
     if (!hadPhotos) {
-      if (state.phase >= PHOTO_REVEAL_PHASE) addMosaicIconTile(payload.tableId, payload.icon);
-      else pendingMosaic.push({ type: 'icon', tableId: payload.tableId, icon: payload.icon });
+      if (shouldQueueMosaic()) pendingMosaic.push({ type: 'icon', tableId: payload.tableId, icon: payload.icon });
+      else addMosaicIconTile(payload.tableId, payload.icon);
     }
   });
   socket.on('photo:add', (payload) => {
@@ -274,10 +280,10 @@
     if (t) { if (!t.photos) t.photos = []; t.photos.push(payload.photo); }
     state.totals = payload.totals;
     renderTotals();
-    if (state.phase >= PHOTO_REVEAL_PHASE) {
-      enqueuePhotoPop(payload.tableId, payload.photo);
-    } else {
+    if (shouldQueueMosaic()) {
       pendingMosaic.push({ type: 'photo', tableId: payload.tableId, photo: payload.photo });
+    } else {
+      enqueuePhotoPop(payload.tableId, payload.photo);
     }
   });
   socket.on('phase:update', (p) => {
