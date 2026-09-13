@@ -66,10 +66,10 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  // Prima di premere "Avvia" (stato lobby) le foto vanno mostrate subito: è solo una prova.
-  // La sorpresa (foto nascoste) ha senso solo durante l'evento vero, fasi 1-2.
+  // Come da copione originale: nelle fasi 1 "Lancio" e 2 "Sfida Numerica" lo schermo
+  // mostra solo QR/timer/numeri, mai le foto. Compaiono solo dalla fase 3 "Visual Challenge".
   function shouldQueueMosaic() {
-    return state.status !== 'lobby' && state.phase < PHOTO_REVEAL_PHASE;
+    return state.phase < PHOTO_REVEAL_PHASE;
   }
 
   function renderMosaicFromScratch() {
