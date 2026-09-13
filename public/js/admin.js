@@ -251,10 +251,15 @@
     const lineHeight = height / lines.length;
     lines.forEach((line, i) => {
       let fontSize = Math.round(lineHeight * 0.8);
-      octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+      const setFont = () => {
+        octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+        // spaziatura tra le lettere: evita che si "tocchino" leggermente col grassetto
+        octx.letterSpacing = Math.max(1, Math.round(fontSize * 0.05)) + 'px';
+      };
+      setFont();
       while (octx.measureText(line).width > width * 0.94 && fontSize > 10) {
         fontSize -= 4;
-        octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+        setFont();
       }
       octx.fillText(line, width / 2, lineHeight * i + lineHeight / 2);
     });

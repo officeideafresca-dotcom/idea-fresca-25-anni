@@ -188,6 +188,9 @@
         box.innerHTML = `<div class="stat"><span>${escapeHtml(T('metricsPending'))}</span></div>`;
       }
     }
+
+    // La scelta dell'icona di gruppo è riservata al Team Leader, come i numeri
+    el('iconSection').style.display = t.leaderDeviceId === deviceId ? 'block' : 'none';
   }
 
   function updatePhotoCount(count) {

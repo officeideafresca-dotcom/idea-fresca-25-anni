@@ -366,10 +366,16 @@
     const lineHeight = height / lines.length;
     lines.forEach((line, i) => {
       let fontSize = Math.round(lineHeight * 0.72);
-      octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+      const setFont = () => {
+        octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+        // un po' di spaziatura tra le lettere: a queste dimensioni il grassetto le fa
+        // "toccare" leggermente (es. T-O-G in "TOGETHER") senza questo margine
+        octx.letterSpacing = Math.max(1, Math.round(fontSize * 0.05)) + 'px';
+      };
+      setFont();
       while (octx.measureText(line).width > width * 0.94 && fontSize > 8) {
         fontSize -= 3;
-        octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+        setFont();
       }
       octx.fillText(line, width / 2, lineHeight * i + lineHeight / 2);
     });
