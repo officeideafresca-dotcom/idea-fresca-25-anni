@@ -32,22 +32,28 @@
   document.addEventListener('click', ensureAudioContext);
   document.addEventListener('keydown', ensureAudioContext);
 
+  const SPIN_DURATION_SEC = 8; // vortice di foto + suono: durata condivisa
+
   function playSpinSound() {
     const ctx = ensureAudioContext();
     if (!ctx) return;
     try {
       const now = ctx.currentTime;
+      const d = SPIN_DURATION_SEC;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(260, now);
-      osc.frequency.exponentialRampToValueAtTime(920, now + 0.9);
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(520, now + d * 0.35);
+      osc.frequency.exponentialRampToValueAtTime(760, now + d * 0.7);
+      osc.frequency.exponentialRampToValueAtTime(980, now + d);
       gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.15);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.6);
+      gain.gain.setValueAtTime(0.18, now + d - 1.3);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + d);
       osc.connect(gain).connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 1.2);
+      osc.stop(now + d + 0.1);
     } catch (e) {
       // il suono è solo un tocco in più: se non funziona, il resto dell'effetto resta intatto
     }
@@ -417,9 +423,9 @@
       const w = Math.max(200, Math.round(rect.width));
       const h = Math.max(150, Math.round(rect.height));
 
-      const cellSize = 16; // celle più piccole = mosaico più definito, meno "a blocchi"
-      const cols = Math.max(24, Math.round(w / cellSize));
-      const rows = Math.max(14, Math.round(h / cellSize));
+      const cellSize = 9; // celle molto più piccole = lettere nettamente più definite
+      const cols = Math.max(40, Math.round(w / cellSize));
+      const rows = Math.max(24, Math.round(h / cellSize));
       const cellW = w / cols, cellH = h / rows;
 
       const lum = buildRevealTextGrid(['TOGETHER', 'WE ARE ONE'], w, h, cols, rows);
@@ -514,7 +520,7 @@
       cluster.appendChild(img);
     });
     wrap.appendChild(cluster);
-    setTimeout(() => cluster.remove(), 1700);
+    setTimeout(() => cluster.remove(), SPIN_DURATION_SEC * 1000 + 300);
   }
 
   function onPhaseChanged(newPhase, oldPhase) {
@@ -528,7 +534,7 @@
       setTimeout(() => {
         triggerAssembleShake();
         flushPendingMosaic();
-      }, 1300);
+      }, SPIN_DURATION_SEC * 1000);
     }
     if (newPhase === REVEAL_PHASE && oldPhase !== REVEAL_PHASE) {
       triggerFlash('white');

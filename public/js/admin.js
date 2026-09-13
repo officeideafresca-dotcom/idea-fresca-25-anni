@@ -186,9 +186,9 @@
     const gridH = 900 - gridTop - 60;
 
     if (photos.length > 0) {
-      const cellSize = 16; // celle più piccole = mosaico più definito, meno "a blocchi"
-      const cols = Math.max(24, Math.round(gridW / cellSize));
-      const rows = Math.max(14, Math.round(gridH / cellSize));
+      const cellSize = 9; // celle molto più piccole = lettere nettamente più definite
+      const cols = Math.max(40, Math.round(gridW / cellSize));
+      const rows = Math.max(24, Math.round(gridH / cellSize));
       const cellW = gridW / cols;
       const cellH = gridH / rows;
 
