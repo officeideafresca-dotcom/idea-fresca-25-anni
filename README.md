@@ -13,16 +13,20 @@ Nessuna installazione: i partecipanti scansionano un QR Code e usano il browser 
   foto (non solo salvata a parte), quindi appare sempre insieme allo scatto ovunque venga
   mostrato — pop-up, mosaico, immagine finale. Interfaccia automatica in IT/DE/FR/ES (rilevata
   dalla lingua del telefono, cambiabile a mano).
-- **Schermo grande** (`/screen`): mostra il QR e il countdown (fasi 1-2: "Lancio" e "Sfida
-  Numerica"), durante le quali **foto e icone restano "in coda"** — non compaiono, come da
-  copione originale (in queste fasi si vedono solo QR/timer/numeri). Appena passi manualmente
-  alla fase **"3. Visual Challenge"** dal pannello admin, tutte le foto accumulate compaiono in
-  sequenza con l'effetto pop-up, e da lì in poi ogni nuova foto appare subito. Per un test
-  rapido prima dell'evento, basta premere il tasto "3" dal pannello admin: non serve aspettare
-  il countdown. Poi l'assemblaggio del mosaico e il reveal finale con le 10 Vision Card e i
-  totali aggregati. È
-  una vista **di sola visualizzazione**, senza alcun controllo — pensata per essere proiettata
-  davanti a tutti senza mostrare pulsanti o PIN.
+- **Schermo grande** (`/screen`): è una vista **di sola visualizzazione**, senza alcun
+  controllo — pensata per essere proiettata davanti a tutti senza mostrare pulsanti o PIN. Le
+  4 fasi (gestite dal pannello admin):
+  1. **Lancio** (appena premi "Avvia"): QR sparisce, appare la dashboard. Ogni foto inviata
+     compare per 3 secondi in una posizione casuale dello schermo, poi sparisce (non entra
+     ancora nel mosaico).
+  2. **Visual Challenge**: flash dorato + effetto "pioggia" — tutte le foto accumulate finora
+     cadono nel mosaico. Da questo momento ogni nuova foto entra subito nel mosaico.
+  3. **Sfida Numerica**: dashboard con numeri e tavoli, il mosaico resta come si è formato.
+  4. **Vision Reveal**: flash bianco, banner, colonne laterali attenuate/desaturate, alone
+     dorato sul mosaico, spotlight sui tavoli — e le tessere del mosaico **si muovono in
+     tempo reale** per ricomporsi nella scritta "Together we are one" (se ci sono meno foto
+     che lettere da riempire, alcune vengono duplicate automaticamente, come nell'immagine
+     finale esportata).
 - **Pannello di regia** (`/admin`): pagina separata, protetta da PIN, da aprire sul **tuo
   telefono o laptop personale** (non sul maxischermo). Da qui avvii/metti in pausa il timer,
   cambi fase manualmente, resetti i dati e scarichi l'immagine finale.

@@ -13,7 +13,7 @@
     const box = el('phaseList');
     box.innerHTML = '';
     const labels = phaseLabels();
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 4; i++) {
       const b = document.createElement('button');
       b.className = 'phase-btn' + (state && state.phase === i ? ' active' : '');
       b.textContent = `${i}. ${labels[i]}`;

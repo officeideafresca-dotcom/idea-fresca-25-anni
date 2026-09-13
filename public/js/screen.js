@@ -4,7 +4,9 @@
   const el = (id) => document.getElementById(id);
   const socket = io();
 
-  const PHOTO_REVEAL_PHASE = 3; // "Visual Challenge": prima di questa fase, foto/icone restano in coda
+  // Fasi: 0 Preparazione, 1 Lancio, 2 Visual Challenge, 3 Sfida Numerica, 4 Vision Reveal
+  const PHOTO_REVEAL_PHASE = 2; // "Visual Challenge": da qui le foto entrano nel mosaico
+  const REVEAL_PHASE = 4; // "Vision Reveal"
 
   let state = null;
   let popQueue = [];
@@ -66,10 +68,37 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  // Come da copione originale: nelle fasi 1 "Lancio" e 2 "Sfida Numerica" lo schermo
-  // mostra solo QR/timer/numeri, mai le foto. Compaiono solo dalla fase 3 "Visual Challenge".
+  // Fase 0 "Preparazione": foto totalmente nascoste. Fase 1 "Lancio": ogni foto appare
+  // sparsa per 3 secondi e sparisce (senza entrare nel mosaico). Da fase 2 "Visual
+  // Challenge" in poi: le foto entrano subito nel mosaico.
+  function photoPhaseMode() {
+    if (!state) return 'hidden';
+    if (state.phase <= 0) return 'hidden';
+    if (state.phase === 1) return 'scatter';
+    return 'live';
+  }
+
   function shouldQueueMosaic() {
     return state.phase < PHOTO_REVEAL_PHASE;
+  }
+
+  function updateMosaicTitleVisibility() {
+    el('mosaicTitle').style.display = el('mosaicGrid').children.length > 6 ? 'none' : 'flex';
+  }
+
+  // Fase 1 "Lancio": mostra una foto in posizione casuale per qualche secondo, poi sparisce.
+  function showScatterPhoto(dataUrl) {
+    const wrap = el('mosaicWrap');
+    if (!wrap) return;
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.className = 'scatter-photo';
+    const size = 14 + Math.random() * 8; // % larghezza contenitore
+    img.style.width = size + '%';
+    img.style.left = Math.random() * Math.max(0, 100 - size) + '%';
+    img.style.top = Math.random() * Math.max(0, 100 - size * 1.1) + '%';
+    wrap.appendChild(img);
+    setTimeout(() => img.remove(), 3000);
   }
 
   function renderMosaicFromScratch() {
@@ -96,12 +125,16 @@
     el('mosaicTitle').style.display = count > 6 ? 'none' : 'flex';
   }
 
+  // Fase 2 "Visual Challenge": effetto pioggia, le foto accumulate cadono nel mosaico
+  // una dopo l'altra a raffica invece che con il pop-up singolo al centro.
   function flushPendingMosaic() {
     const items = pendingMosaic;
     pendingMosaic = [];
-    items.forEach((item) => {
-      if (item.type === 'photo') enqueuePhotoPop(item.tableId, item.photo);
-      else addMosaicIconTile(item.tableId, item.icon);
+    items.forEach((item, i) => {
+      setTimeout(() => {
+        if (item.type === 'photo') addMosaicTileRain(item.photo.dataUrl);
+        else addMosaicIconTile(item.tableId, item.icon);
+      }, i * 40);
     });
   }
 
@@ -110,7 +143,15 @@
     img.className = 'mosaic-tile';
     img.src = dataUrl;
     el('mosaicGrid').appendChild(img);
-    el('mosaicTitle').style.display = el('mosaicGrid').children.length > 6 ? 'none' : 'flex';
+    updateMosaicTitleVisibility();
+  }
+
+  function addMosaicTileRain(dataUrl) {
+    const img = document.createElement('img');
+    img.className = 'mosaic-tile rain-in';
+    img.src = dataUrl;
+    el('mosaicGrid').appendChild(img);
+    updateMosaicTitleVisibility();
   }
 
   function addMosaicIconTile(tableId, icon) {
@@ -123,7 +164,7 @@
     div.textContent = ICON_EMOJI[icon] || '✨';
     el('mosaicGrid').appendChild(div);
     mosaicIconTiles[tableId] = div;
-    el('mosaicTitle').style.display = el('mosaicGrid').children.length > 6 ? 'none' : 'flex';
+    updateMosaicTitleVisibility();
   }
 
   // ---------- Photo pop queue ----------
@@ -178,7 +219,7 @@
 
   function updateOverlayVisibility() {
     if (!state) return;
-    const showLaunch = state.phase <= 1;
+    const showLaunch = state.phase <= 0;
     el('launchOverlay').style.display = showLaunch ? 'flex' : 'none';
   }
 
@@ -186,7 +227,7 @@
   function updateRevealMode() {
     const root = el('screenRoot');
     const banner = el('revealBanner');
-    if (state && state.phase >= 5) {
+    if (state && state.phase >= REVEAL_PHASE) {
       root.classList.add('reveal');
       banner.style.display = 'block';
       banner.textContent = `${window.t('it', 'screen.revealTitle')} · ${window.t('it', 'screen.revealSubtitle')}`;
@@ -219,6 +260,97 @@
     updateRevealMode();
   }
 
+  // ---------- Fase "Vision Reveal": le foto si muovono per formare la scritta ----------
+  // Rasterizza `lines` e restituisce le celle "accese" (dentro una lettera) come
+  // rettangoli {x,y,w,h} in pixel, dentro un'area width x height.
+  function buildScreenTextCells(lines, width, height, cellSize) {
+    const off = document.createElement('canvas');
+    off.width = width; off.height = height;
+    const octx = off.getContext('2d');
+    if (!octx) return [];
+    octx.fillStyle = '#000';
+    octx.fillRect(0, 0, width, height);
+    octx.fillStyle = '#fff';
+    octx.textAlign = 'center';
+    octx.textBaseline = 'middle';
+    const lineHeight = height / lines.length;
+    lines.forEach((line, i) => {
+      let fontSize = Math.round(lineHeight * 0.72);
+      octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+      while (octx.measureText(line).width > width * 0.94 && fontSize > 8) {
+        fontSize -= 3;
+        octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+      }
+      octx.fillText(line, width / 2, lineHeight * i + lineHeight / 2);
+    });
+
+    const cols = Math.max(10, Math.round(width / cellSize));
+    const rows = Math.max(6, Math.round(height / cellSize));
+    const full = octx.getImageData(0, 0, width, height).data;
+    const cellW = width / cols, cellH = height / rows;
+    const cells = [];
+    for (let ry = 0; ry < rows; ry++) {
+      const y0 = Math.floor(ry * cellH), y1 = Math.max(y0 + 1, Math.floor((ry + 1) * cellH));
+      for (let rx = 0; rx < cols; rx++) {
+        const x0 = Math.floor(rx * cellW), x1 = Math.max(x0 + 1, Math.floor((rx + 1) * cellW));
+        let sum = 0, count = 0;
+        for (let y = y0; y < y1; y += 2) {
+          for (let x = x0; x < x1; x += 2) {
+            sum += full[(y * width + x) * 4];
+            count++;
+          }
+        }
+        if (count && sum / count / 255 > 0.5) cells.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+      }
+    }
+    return cells;
+  }
+
+  // Sposta le tessere già presenti nel mosaico in modo che, viste nel loro insieme,
+  // compongano la scritta "Together we are one". Se non ci sono abbastanza foto per
+  // riempire tutte le lettere, clona quelle esistenti (stesso trucco dell'immagine finale).
+  function startTextFormation() {
+    try {
+      const grid = el('mosaicGrid');
+      const tiles = Array.from(grid.children);
+      if (!tiles.length) return; // nessuna foto: il resto del reveal resta comunque intatto
+      const rect = grid.getBoundingClientRect();
+      const w = Math.round(rect.width), h = Math.round(rect.height);
+      if (!w || !h) return;
+
+      const cells = buildScreenTextCells(['TOGETHER', 'WE ARE ONE'], w, h, 34);
+      if (!cells.length) return;
+
+      grid.classList.add('text-forming');
+      tiles.forEach((tile, i) => {
+        const cell = cells[i % cells.length];
+        tile.style.left = cell.x + 'px';
+        tile.style.top = cell.y + 'px';
+        tile.style.width = cell.w + 'px';
+        tile.style.height = cell.h + 'px';
+      });
+
+      // celle rimaste senza tessera: le riempiamo clonando le foto già arrivate
+      for (let i = tiles.length; i < cells.length; i++) {
+        const src = tiles[i % tiles.length];
+        const clone = src.cloneNode(true);
+        clone.style.animation = 'none';
+        clone.style.opacity = '0';
+        const cell = cells[i];
+        clone.style.left = cell.x + 'px';
+        clone.style.top = cell.y + 'px';
+        clone.style.width = cell.w + 'px';
+        clone.style.height = cell.h + 'px';
+        grid.appendChild(clone);
+        requestAnimationFrame(() => { clone.style.opacity = '1'; });
+      }
+    } catch (e) {
+      // Effetto opzionale: se qualcosa va storto qui, gli altri effetti del reveal
+      // (flash, banner, attenuazione colonne, spotlight) restano comunque attivi.
+      console.error('Formazione scritta fotomosaico non riuscita:', e);
+    }
+  }
+
   // ---------- Effetti di transizione fase ----------
   let lastKnownPhase = null;
 
@@ -240,11 +372,13 @@
   function onPhaseChanged(newPhase, oldPhase) {
     if (oldPhase == null) return; // primo caricamento pagina: non è una transizione da segnalare
     if (newPhase >= PHOTO_REVEAL_PHASE && oldPhase < PHOTO_REVEAL_PHASE) {
-      triggerFlash('gold');
+      triggerAssemble(); // scossa del mosaico + flash dorato: effetto "pioggia" in arrivo
       flushPendingMosaic();
     }
-    if (newPhase === 4 && oldPhase !== 4) triggerAssemble();
-    if (newPhase === 5 && oldPhase !== 5) triggerFlash('white');
+    if (newPhase === REVEAL_PHASE && oldPhase !== REVEAL_PHASE) {
+      triggerFlash('white');
+      setTimeout(startTextFormation, 900);
+    }
   }
 
   // ---------- Socket events ----------
@@ -270,8 +404,10 @@
     t.icon = payload.icon;
     renderTableCards();
     if (!hadPhotos) {
-      if (shouldQueueMosaic()) pendingMosaic.push({ type: 'icon', tableId: payload.tableId, icon: payload.icon });
-      else addMosaicIconTile(payload.tableId, payload.icon);
+      // le icone (a differenza delle foto) non hanno un'anteprima da "spargere" in fase 1:
+      // restano semplicemente in coda finché non si entra in "Visual Challenge"
+      if (photoPhaseMode() === 'live') addMosaicIconTile(payload.tableId, payload.icon);
+      else pendingMosaic.push({ type: 'icon', tableId: payload.tableId, icon: payload.icon });
     }
   });
   socket.on('photo:add', (payload) => {
@@ -280,10 +416,12 @@
     if (t) { if (!t.photos) t.photos = []; t.photos.push(payload.photo); }
     state.totals = payload.totals;
     renderTotals();
-    if (shouldQueueMosaic()) {
-      pendingMosaic.push({ type: 'photo', tableId: payload.tableId, photo: payload.photo });
-    } else {
+    const mode = photoPhaseMode();
+    if (mode === 'live') {
       enqueuePhotoPop(payload.tableId, payload.photo);
+    } else {
+      pendingMosaic.push({ type: 'photo', tableId: payload.tableId, photo: payload.photo });
+      if (mode === 'scatter') showScatterPhoto(payload.photo.dataUrl);
     }
   });
   socket.on('phase:update', (p) => {
