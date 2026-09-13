@@ -529,6 +529,9 @@
     lastKnownPhase = st.phase;
     fullRender();
     renderMosaicFromScratch();
+    // Se la pagina si (ri)carica quando si è già in Vision Reveal (es. dopo un F5),
+    // il fotomosaico va generato subito: non c'è nessuna transizione di fase da intercettare.
+    if (st.phase >= REVEAL_PHASE) setTimeout(renderRevealMosaic, 300);
   });
   socket.on('metrics:update', (payload) => {
     if (!state) return;
