@@ -190,7 +190,7 @@
       const cellW = gridW / cols;
       const cellH = gridH / rows;
 
-      const lum = buildTextLuminanceGrid(['IDEA FRESCA', '25'], gridW, gridH, cols, rows);
+      const lum = buildTextLuminanceGrid(['TOGETHER', 'WE ARE ONE'], gridW, gridH, cols, rows);
 
       // mescoliamo le foto: con poche decine di scatti verranno riusate più volte,
       // lo shuffle evita pattern ripetitivi troppo regolari e visibili

@@ -304,19 +304,14 @@ io.on('connection', (socket) => {
         }
         const source = allPhotos.slice(0, 2);
         const current = allPhotos.length;
+        const t = state.tables[1]; // tutte sul tavolo 1: più veloce da verificare
         let added = 0;
-        let tableIdx = 0;
         while (current + added < target) {
-          const t = state.tables[(tableIdx % TABLE_COUNT) + 1];
-          if (t.photos.length < MAX_PHOTOS_PER_TABLE) {
-            const src = source[added % source.length];
-            const photo = { id: `test-${Date.now()}-${added}`, dataUrl: src.dataUrl, message: src.message || '', ts: Date.now() };
-            t.photos.push(photo);
-            io.emit('photo:add', { tableId: t.id, photo, photosCount: t.photos.length, totals: computeTotals(state.tables) });
-            added++;
-          }
-          tableIdx++;
-          if (tableIdx > TABLE_COUNT * 20) break; // rete di sicurezza anti-loop-infinito
+          const src = source[added % source.length];
+          const photo = { id: `test-${Date.now()}-${added}`, dataUrl: src.dataUrl, message: src.message || '', ts: Date.now() };
+          t.photos.push(photo); // limite MAX_PHOTOS_PER_TABLE non applicato: è un riempimento di test
+          io.emit('photo:add', { tableId: t.id, photo, photosCount: t.photos.length, totals: computeTotals(state.tables) });
+          added++;
         }
         return;
       }
