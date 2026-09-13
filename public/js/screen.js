@@ -290,6 +290,7 @@
       root.classList.remove('reveal');
       banner.style.display = 'none';
       applyRevealSlogan(false);
+      clearRevealMosaic();
       stopSpotlight();
     }
   }
@@ -317,17 +318,149 @@
 
   // ---------- Fase "Vision Reveal": scritta dietro il mosaico ----------
   // Durante il reveal la scritta di sfondo cambia da "IF/25" a "Together We Are One".
+  // È un ripiego immediato: se ci sono foto, pochi istanti dopo viene sostituita dal
+  // fotomosaico vero (stesso identico algoritmo dell'immagine finale esportata).
   function applyRevealSlogan(active) {
     const title = el('mosaicTitle');
     if (active) {
       title.innerHTML = 'TOGETHER<br/>WE ARE ONE';
       title.classList.add('reveal-slogan');
-      title.style.display = 'flex'; // sempre visibile nel reveal, anche con molte foto
+      title.style.display = 'flex';
     } else {
       title.innerHTML = 'IF<br/>25';
       title.classList.remove('reveal-slogan');
       updateMosaicTitleVisibility();
     }
+  }
+
+  function loadImageEl(src) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  function drawCoverInto(ctx, img, x, y, w, h) {
+    if (!img) return;
+    const ir = img.width / img.height;
+    const r = w / h;
+    let sw, sh, sx, sy;
+    if (ir > r) { sh = img.height; sw = sh * r; sx = (img.width - sw) / 2; sy = 0; }
+    else { sw = img.width; sh = sw / r; sx = 0; sy = img.height - sh; }
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  // Identica alla funzione usata per l'immagine finale esportata (admin.js), così il
+  // fotomosaico live e quello scaricato/inviato risultano sempre coerenti tra loro.
+  function buildRevealTextGrid(lines, width, height, cols, rows) {
+    const off = document.createElement('canvas');
+    off.width = width; off.height = height;
+    const octx = off.getContext('2d');
+    octx.fillStyle = '#000';
+    octx.fillRect(0, 0, width, height);
+    octx.fillStyle = '#fff';
+    octx.textAlign = 'center';
+    octx.textBaseline = 'middle';
+    const lineHeight = height / lines.length;
+    lines.forEach((line, i) => {
+      let fontSize = Math.round(lineHeight * 0.72);
+      octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+      while (octx.measureText(line).width > width * 0.94 && fontSize > 8) {
+        fontSize -= 3;
+        octx.font = `900 ${fontSize}px Segoe UI, Arial`;
+      }
+      octx.fillText(line, width / 2, lineHeight * i + lineHeight / 2);
+    });
+    const full = octx.getImageData(0, 0, width, height).data;
+    const cellW = width / cols, cellH = height / rows;
+    const grid = [];
+    for (let ry = 0; ry < rows; ry++) {
+      const row = [];
+      const y0 = Math.floor(ry * cellH), y1 = Math.max(y0 + 1, Math.floor((ry + 1) * cellH));
+      for (let rx = 0; rx < cols; rx++) {
+        const x0 = Math.floor(rx * cellW), x1 = Math.max(x0 + 1, Math.floor((rx + 1) * cellW));
+        let sum = 0, count = 0;
+        for (let y = y0; y < y1; y += 2) {
+          for (let x = x0; x < x1; x += 2) {
+            sum += full[(y * width + x) * 4];
+            count++;
+          }
+        }
+        row.push(count ? sum / count / 255 : 0);
+      }
+      grid.push(row);
+    }
+    return grid;
+  }
+
+  // Genera e mostra, dentro il mosaico live, lo stesso fotomosaico dell'immagine finale.
+  async function renderRevealMosaic() {
+    try {
+      if (!state) return;
+      const wrap = el('mosaicWrap');
+      const grid = el('mosaicGrid');
+      if (!wrap || !grid) return;
+
+      const photos = [];
+      Object.values(state.tables).forEach((t) => (t.photos || []).forEach((p) => photos.push(p.dataUrl)));
+      if (!photos.length) return; // nessuna foto: resta la scritta semplice di ripiego
+
+      const rect = wrap.getBoundingClientRect();
+      const w = Math.max(200, Math.round(rect.width));
+      const h = Math.max(150, Math.round(rect.height));
+
+      const cellSize = 22;
+      const cols = Math.max(20, Math.round(w / cellSize));
+      const rows = Math.max(10, Math.round(h / cellSize));
+      const cellW = w / cols, cellH = h / rows;
+
+      const lum = buildRevealTextGrid(['TOGETHER', 'WE ARE ONE'], w, h, cols, rows);
+
+      const shuffled = photos.slice();
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const imgs = await Promise.all(shuffled.map((src) => loadImageEl(src)));
+      if (!state || state.phase < REVEAL_PHASE) return; // nel frattempo si è usciti dal reveal
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.id = 'revealMosaicCanvas';
+      canvas.style.cssText = 'position:relative; z-index:2; width:100%; height:100%; display:block; border-radius:16px;';
+      const ctx = canvas.getContext('2d');
+
+      let idx = 0;
+      for (let ry = 0; ry < rows; ry++) {
+        for (let rx = 0; rx < cols; rx++) {
+          const img = imgs.length ? imgs[idx % imgs.length] : null;
+          idx++;
+          const x = rx * cellW, y = ry * cellH;
+          drawCoverInto(ctx, img, x, y, cellW, cellH);
+          const isLetter = lum[ry][rx] > 0.5;
+          ctx.fillStyle = isLetter ? 'rgba(199,154,43,0.10)' : 'rgba(0,0,0,0.8)';
+          ctx.fillRect(x, y, cellW, cellH);
+        }
+      }
+
+      clearRevealMosaic();
+      grid.style.display = 'none';
+      el('mosaicTitle').style.display = 'none';
+      wrap.appendChild(canvas);
+    } catch (e) {
+      // Ripiego opzionale: se qualcosa va storto qui, resta comunque visibile la scritta
+      // semplice attivata da applyRevealSlogan(), e il resto del reveal non ne risente.
+      console.error('Fotomosaico live del reveal non riuscito:', e);
+    }
+  }
+
+  function clearRevealMosaic() {
+    const canvas = document.getElementById('revealMosaicCanvas');
+    if (canvas) canvas.remove();
+    const grid = el('mosaicGrid');
+    if (grid) grid.style.display = '';
   }
 
   // ---------- Effetti di transizione fase ----------
@@ -386,6 +519,7 @@
     }
     if (newPhase === REVEAL_PHASE && oldPhase !== REVEAL_PHASE) {
       triggerFlash('white');
+      setTimeout(renderRevealMosaic, 900);
     }
   }
 
