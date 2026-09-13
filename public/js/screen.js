@@ -417,9 +417,9 @@
       const w = Math.max(200, Math.round(rect.width));
       const h = Math.max(150, Math.round(rect.height));
 
-      const cellSize = 22;
-      const cols = Math.max(20, Math.round(w / cellSize));
-      const rows = Math.max(10, Math.round(h / cellSize));
+      const cellSize = 16; // celle più piccole = mosaico più definito, meno "a blocchi"
+      const cols = Math.max(24, Math.round(w / cellSize));
+      const rows = Math.max(14, Math.round(h / cellSize));
       const cellW = w / cols, cellH = h / rows;
 
       const lum = buildRevealTextGrid(['TOGETHER', 'WE ARE ONE'], w, h, cols, rows);
@@ -432,11 +432,18 @@
       const imgs = await Promise.all(shuffled.map((src) => loadImageEl(src)));
       if (!state || state.phase < REVEAL_PHASE) return; // nel frattempo si è usciti dal reveal
 
+      // Renderizziamo alla risoluzione fisica dello schermo (devicePixelRatio), non solo
+      // ai pixel CSS: altrimenti su schermi ad alta densità il risultato appare sfocato.
+      const dpr = Math.min(2.5, window.devicePixelRatio || 1);
       const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
       canvas.id = 'revealMosaicCanvas';
       canvas.style.cssText = 'position:relative; z-index:2; width:100%; height:100%; display:block; border-radius:16px;';
       const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
       let idx = 0;
       for (let ry = 0; ry < rows; ry++) {

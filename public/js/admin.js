@@ -153,6 +153,8 @@
     const canvas = document.createElement('canvas');
     canvas.width = 1600; canvas.height = 900;
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     const grad = ctx.createRadialGradient(800, 200, 100, 800, 450, 900);
     grad.addColorStop(0, '#12594f'); grad.addColorStop(1, '#06211d');
     ctx.fillStyle = grad; ctx.fillRect(0, 0, 1600, 900);
@@ -184,9 +186,9 @@
     const gridH = 900 - gridTop - 60;
 
     if (photos.length > 0) {
-      const cellSize = 22;
-      const cols = Math.max(20, Math.round(gridW / cellSize));
-      const rows = Math.max(10, Math.round(gridH / cellSize));
+      const cellSize = 16; // celle più piccole = mosaico più definito, meno "a blocchi"
+      const cols = Math.max(24, Math.round(gridW / cellSize));
+      const rows = Math.max(14, Math.round(gridH / cellSize));
       const cellW = gridW / cols;
       const cellH = gridH / rows;
 
