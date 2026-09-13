@@ -221,14 +221,19 @@ io.on('connection', (socket) => {
     io.emit('icon:update', { tableId: t.id, icon });
   });
 
-  socket.on('submit-photo', ({ tableId, dataUrl, lang }) => {
+  socket.on('submit-photo', ({ tableId, dataUrl, message, lang }) => {
     const t = state.tables[tableId];
     if (!t || !dataUrl) return;
     if (!/^data:image\/(jpeg|png|webp);base64,/.test(dataUrl)) return;
     if (dataUrl.length > 400 * 1024) return; // guard: reject oversized payloads (client should compress)
     if (t.photos.length >= MAX_PHOTOS_PER_TABLE) return;
     if (lang) t.lang = t.lang || lang;
-    const photo = { id: `${tableId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, dataUrl, ts: Date.now() };
+    const photo = {
+      id: `${tableId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      dataUrl,
+      message: String(message || '').slice(0, 80),
+      ts: Date.now(),
+    };
     t.photos.push(photo);
     t.updatedAt = Date.now();
     io.emit('photo:add', { tableId: t.id, photo, photosCount: t.photos.length, totals: computeTotals(state.tables) });
@@ -284,6 +289,35 @@ io.on('connection', (socket) => {
         const recipientCount = io.sockets.sockets.size;
         io.emit('final-image', { dataUrl, ts: Date.now() });
         socket.emit('broadcast-image:sent', { recipientCount });
+        return;
+      }
+      // TEMPORANEO - SOLO PER TEST: duplica le prime foto caricate fino ad avere ~N foto
+      // totali, per vedere l'effetto Vision Reveal a schermo pieno senza caricare 80 foto
+      // vere. Da rimuovere (insieme al pulsante in admin.html/js) prima dell'evento reale.
+      case 'test-fill-photos': {
+        const target = (payload && payload.count) || 80;
+        const allPhotos = [];
+        Object.values(state.tables).forEach((t) => t.photos.forEach((p) => allPhotos.push(p)));
+        if (!allPhotos.length) {
+          socket.emit('admin:error', { message: 'Carica almeno una foto vera prima di usare il riempimento di test', code: 'invalid_image' });
+          return;
+        }
+        const source = allPhotos.slice(0, 2);
+        const current = allPhotos.length;
+        let added = 0;
+        let tableIdx = 0;
+        while (current + added < target) {
+          const t = state.tables[(tableIdx % TABLE_COUNT) + 1];
+          if (t.photos.length < MAX_PHOTOS_PER_TABLE) {
+            const src = source[added % source.length];
+            const photo = { id: `test-${Date.now()}-${added}`, dataUrl: src.dataUrl, message: src.message || '', ts: Date.now() };
+            t.photos.push(photo);
+            io.emit('photo:add', { tableId: t.id, photo, photosCount: t.photos.length, totals: computeTotals(state.tables) });
+            added++;
+          }
+          tableIdx++;
+          if (tableIdx > TABLE_COUNT * 20) break; // rete di sicurezza anti-loop-infinito
+        }
         return;
       }
       default:

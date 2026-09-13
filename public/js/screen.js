@@ -18,6 +18,41 @@
   let pendingMosaic = []; // { type: 'photo'|'icon', tableId, photo?, icon? } in attesa della fase giusta
   const mosaicIconTiles = {}; // tableId -> DOM element (icon placeholder tile, one per table)
 
+  // ---------- Suono "whoosh" per il vortice di foto (sintetizzato, nessun file audio) ----------
+  // I browser bloccano l'audio finché non c'è stata un'interazione: basta un click/tasto
+  // qualsiasi sulla pagina (es. per andare a schermo intero) per sbloccarlo per il resto della sessione.
+  let audioCtx = null;
+  function ensureAudioContext() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    return audioCtx;
+  }
+  document.addEventListener('click', ensureAudioContext);
+  document.addEventListener('keydown', ensureAudioContext);
+
+  function playSpinSound() {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(260, now);
+      osc.frequency.exponentialRampToValueAtTime(920, now + 0.9);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 1.2);
+    } catch (e) {
+      // il suono è solo un tocco in più: se non funziona, il resto dell'effetto resta intatto
+    }
+  }
+
   function fmt(n) { return Number(n || 0).toLocaleString('it-IT'); }
 
   function renderTopLabels() {
@@ -102,6 +137,21 @@
     img.style.top = Math.random() * Math.max(0, 100 - size * 1.1) + '%';
     wrap.appendChild(img);
     setTimeout(() => img.remove(), 3000);
+  }
+
+  // Il Power Message non è più disegnato sulla foto: compare come "bolla" fluttuante
+  // in posizione casuale per 3 secondi, indipendentemente dalla fase e da dove va la foto.
+  function showScatterMessage(text) {
+    if (!text) return;
+    const wrap = el('mosaicWrap');
+    if (!wrap) return;
+    const div = document.createElement('div');
+    div.className = 'scatter-message';
+    div.textContent = text;
+    div.style.left = Math.random() * 70 + '%';
+    div.style.top = Math.random() * 80 + '%';
+    wrap.appendChild(div);
+    setTimeout(() => div.remove(), 3000);
   }
 
   function renderMosaicFromScratch() {
@@ -304,6 +354,7 @@
     if (!photoUrls.length) return;
     const wrap = el('mosaicWrap');
     if (!wrap) return;
+    playSpinSound();
     const cluster = document.createElement('div');
     cluster.className = 'spin-cluster';
     photoUrls.slice(0, 8).forEach((dataUrl, i, arr) => {
@@ -373,6 +424,7 @@
     if (t) { if (!t.photos) t.photos = []; t.photos.push(payload.photo); }
     state.totals = payload.totals;
     renderTotals();
+    showScatterMessage(payload.photo.message); // il Power Message compare sempre, in ogni fase
     const mode = photoPhaseMode();
     if (mode === 'live') {
       enqueuePhotoPop(payload.tableId, payload.photo);

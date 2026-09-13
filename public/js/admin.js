@@ -56,8 +56,20 @@
   }
 
   socket.on('init', (st) => { state = st; renderStatus(); });
-  socket.on('metrics:update', (p) => { if (state) { state.tables[p.tableId] = p.table; state.totals = p.totals; renderStatus(); } });
-  socket.on('photo:add', (p) => { if (state) { state.totals = p.totals; renderStatus(); } });
+  socket.on('metrics:update', (p) => {
+    if (!state) return;
+    // il server manda un riepilogo senza `photos`: uniamo per non perdere l'array locale
+    state.tables[p.tableId] = Object.assign({}, state.tables[p.tableId], p.table);
+    state.totals = p.totals;
+    renderStatus();
+  });
+  socket.on('photo:add', (p) => {
+    if (!state) return;
+    const t = state.tables[p.tableId];
+    if (t) { if (!t.photos) t.photos = []; t.photos.push(p.photo); }
+    state.totals = p.totals;
+    renderStatus();
+  });
   socket.on('phase:update', (p) => { if (state) { Object.assign(state, p); renderStatus(); } });
   socket.on('reset', () => socket.emit('request-state'));
   socket.on('broadcast-image:sent', (p) => {
@@ -100,6 +112,11 @@
     if (confirm('Confermi il reset completo di tutti i dati? Questa azione non si può annullare.')) {
       sendAdmin('reset');
     }
+  });
+
+  // TEMPORANEO - SOLO PER TEST: rimuovere insieme al bottone in admin.html prima dell'evento reale
+  el('btnTestFill').addEventListener('click', () => {
+    sendAdmin('test-fill-photos', { count: 80 });
   });
 
   el('btnSaveImage').addEventListener('click', composeSaveAndBroadcastImage);

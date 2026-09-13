@@ -9,10 +9,11 @@ Nessuna installazione: i partecipanti scansionano un QR Code e usano il browser 
   "Team Leader" per quel tavolo** può inserire/modificare i 3 numeri chiave della visione
   2027–2028 (bloccato anche lato server, non solo nell'interfaccia) — tutti gli altri al tavolo
   vedono i numeri in sola lettura, ma possono comunque caricare foto e icone. Ogni foto richiede
-  un **Power Message** obbligatorio: una frase che viene disegnata direttamente sui pixel della
-  foto (non solo salvata a parte), quindi appare sempre insieme allo scatto ovunque venga
-  mostrato — pop-up, mosaico, immagine finale. Interfaccia automatica in IT/DE/FR/ES (rilevata
-  dalla lingua del telefono, cambiabile a mano).
+  un **Power Message** obbligatorio: una frase che compare come "bolla" fluttuante in posizione
+  casuale sullo schermo grande per 3 secondi (esattamente come le foto in fase "Lancio"), poi
+  sparisce — la foto stessa resta sempre pulita, senza testo sopra, sia nel mosaico live sia
+  nell'immagine finale esportata. Interfaccia automatica in IT/DE/FR/ES (rilevata dalla lingua
+  del telefono, cambiabile a mano).
 - **Schermo grande** (`/screen`): è una vista **di sola visualizzazione**, senza alcun
   controllo — pensata per essere proiettata davanti a tutti senza mostrare pulsanti o PIN. Le
   4 fasi (gestite dal pannello admin):

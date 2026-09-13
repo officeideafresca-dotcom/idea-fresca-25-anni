@@ -272,7 +272,7 @@
     });
   });
 
-  el('sendPhotoBtn').addEventListener('click', async () => {
+  el('sendPhotoBtn').addEventListener('click', () => {
     if (!tableId || !pendingPhotoDataUrl) return;
     const message = el('powerMessageInput').value.trim();
     if (!message) {
@@ -280,8 +280,9 @@
       el('powerMessageInput').focus();
       return;
     }
-    const finalDataUrl = await bakeCaption(pendingPhotoDataUrl, message);
-    socket.emit('submit-photo', { tableId, dataUrl: finalDataUrl, lang });
+    // Il Power Message non viene più disegnato sulla foto: viaggia come testo a parte e
+    // compare sullo schermo grande come elemento fluttuante per qualche secondo.
+    socket.emit('submit-photo', { tableId, dataUrl: pendingPhotoDataUrl, message, lang });
     showToast('📸 ' + T('photosSent'));
     pendingPhotoDataUrl = null;
     el('photoPreview').classList.remove('show');
@@ -311,69 +312,6 @@
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-  }
-
-  // Disegna il Power Message come parte integrante dei pixel della foto (barra in basso)
-  function bakeCaption(dataUrl, message) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-
-        const barHeight = Math.max(40, Math.round(img.height * 0.18));
-        const grad = ctx.createLinearGradient(0, img.height - barHeight, 0, img.height);
-        grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.75)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, img.height - barHeight, img.width, barHeight);
-
-        const fontSize = Math.max(15, Math.round(img.width * 0.055));
-        ctx.font = `700 ${fontSize}px Segoe UI, Arial`;
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        const maxWidth = img.width * 0.92;
-        const lines = wrapText(ctx, message, maxWidth, 2);
-        const lineHeight = fontSize * 1.2;
-        let y = img.height - Math.round(barHeight * 0.18);
-        for (let i = lines.length - 1; i >= 0; i--) {
-          ctx.fillText(lines[i], img.width / 2, y);
-          y -= lineHeight;
-        }
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      };
-      img.onerror = () => resolve(dataUrl);
-      img.src = dataUrl;
-    });
-  }
-
-  function wrapText(ctx, text, maxWidth, maxLines) {
-    const words = text.split(/\s+/).filter(Boolean);
-    const lines = [];
-    let current = '';
-    for (const w of words) {
-      const test = current ? current + ' ' + w : w;
-      if (ctx.measureText(test).width > maxWidth && current) {
-        lines.push(current);
-        current = w;
-      } else {
-        current = test;
-      }
-    }
-    if (current) lines.push(current);
-    if (lines.length > maxLines) {
-      lines.length = maxLines;
-      let last = lines[maxLines - 1] + '…';
-      while (ctx.measureText(last).width > maxWidth && last.length > 1) {
-        last = last.slice(0, -2) + '…';
-      }
-      lines[maxLines - 1] = last;
-    }
-    return lines;
   }
 
   el('changeTableBtn').addEventListener('click', () => {
