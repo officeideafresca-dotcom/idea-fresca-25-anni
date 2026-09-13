@@ -16,17 +16,17 @@ Nessuna installazione: i partecipanti scansionano un QR Code e usano il browser 
 - **Schermo grande** (`/screen`): è una vista **di sola visualizzazione**, senza alcun
   controllo — pensata per essere proiettata davanti a tutti senza mostrare pulsanti o PIN. Le
   4 fasi (gestite dal pannello admin):
-  1. **Lancio** (appena premi "Avvia"): QR sparisce, appare la dashboard. Ogni foto inviata
-     compare per 3 secondi in una posizione casuale dello schermo, poi sparisce (non entra
-     ancora nel mosaico).
-  2. **Visual Challenge**: flash dorato + effetto "pioggia" — tutte le foto accumulate finora
-     cadono nel mosaico. Da questo momento ogni nuova foto entra subito nel mosaico.
-  3. **Sfida Numerica**: dashboard con numeri e tavoli, il mosaico resta come si è formato.
+  1. **Lancio** (appena premi "Avvia"): QR sparisce, appare la dashboard. I numeri restano
+     nascosti (mostrano "—"). Ogni foto inviata compare per 3 secondi in una posizione casuale
+     dello schermo, poi sparisce (non entra ancora nel mosaico).
+  2. **Visual Challenge**: flash dorato, poi un piccolo gruppo di foto ruota per un istante al
+     centro dello schermo, infine tutte le foto accumulate finora "piovono" nel mosaico. Da
+     questo momento ogni nuova foto entra subito nel mosaico. I numeri restano ancora nascosti.
+  3. **Sfida Numerica**: da qui i numeri (totali e per tavolo) diventano visibili; il mosaico
+     resta come si è formato.
   4. **Vision Reveal**: flash bianco, banner, colonne laterali attenuate/desaturate, alone
-     dorato sul mosaico, spotlight sui tavoli — e le tessere del mosaico **si muovono in
-     tempo reale** per ricomporsi nella scritta "Together we are one" (se ci sono meno foto
-     che lettere da riempire, alcune vengono duplicate automaticamente, come nell'immagine
-     finale esportata).
+     dorato sul mosaico, spotlight sui tavoli, e la scritta di sfondo del mosaico cambia da
+     "IF/25" a **"Together We Are One"**.
 - **Pannello di regia** (`/admin`): pagina separata, protetta da PIN, da aprire sul **tuo
   telefono o laptop personale** (non sul maxischermo). Da qui avvii/metti in pausa il timer,
   cambi fase manualmente, resetti i dati e scarichi l'immagine finale.

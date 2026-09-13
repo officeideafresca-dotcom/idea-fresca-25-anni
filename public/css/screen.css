@@ -162,14 +162,31 @@ html, body {
   100% { opacity: 0; transform: scale(0.94); }
 }
 
-/* Fase 4 "Vision Reveal": le tessere si spostano liberamente per comporre la scritta */
-.mosaic-grid.text-forming { overflow: hidden; }
-.mosaic-grid.text-forming .mosaic-tile {
+/* Fase 2 "Visual Challenge": un gruppo di foto ruota al centro prima di "piovere" nel mosaico */
+.spin-cluster {
   position: absolute;
-  animation: none !important;
-  transition: left 1.3s cubic-bezier(.22,.9,.32,1), top 1.3s cubic-bezier(.22,.9,.32,1),
-    width 1.3s ease, height 1.3s ease, opacity 0.8s ease;
-  border-radius: 3px;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.spin-cluster img {
+  position: absolute;
+  top: calc(50% + var(--jy, 0px));
+  left: calc(50% + var(--jx, 0px));
+  width: 130px;
+  height: 130px;
+  margin: -65px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 3px solid rgba(199,154,43,0.75);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+  animation: spinPop 1.3s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes spinPop {
+  0% { transform: scale(0.15) rotate(0deg); opacity: 0; }
+  45% { transform: scale(1.15) rotate(360deg); opacity: 1; }
+  70% { transform: scale(1) rotate(400deg); opacity: 1; }
+  100% { transform: scale(0.3) rotate(460deg); opacity: 0; }
 }
 
 .empty-mosaic-hint {
@@ -238,6 +255,12 @@ html, body {
   font-size: 11rem;
   transition: color 0.6s ease, font-size 0.6s ease;
   text-shadow: 0 0 60px rgba(199,154,43,0.5);
+}
+/* "Together We Are One" è più lunga di "IF/25": serve un font più piccolo per stare nello schermo */
+.screen.reveal .mosaic-title.reveal-slogan {
+  font-size: 4rem;
+  letter-spacing: 2px;
+  line-height: 1.35;
 }
 .reveal-banner { animation: bannerPop 0.6s ease; }
 @keyframes bannerPop {

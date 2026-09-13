@@ -6,6 +6,7 @@
 
   // Fasi: 0 Preparazione, 1 Lancio, 2 Visual Challenge, 3 Sfida Numerica, 4 Vision Reveal
   const PHOTO_REVEAL_PHASE = 2; // "Visual Challenge": da qui le foto entrano nel mosaico
+  const NUMBERS_REVEAL_PHASE = 3; // "Sfida Numerica": da qui si vedono i numeri dei tavoli
   const REVEAL_PHASE = 4; // "Vision Reveal"
 
   let state = null;
@@ -35,27 +36,29 @@
   function renderTotals() {
     if (!state) return;
     const t = state.totals;
-    el('totalNetwork').textContent = '+' + fmt(t.network);
-    el('totalRetention').textContent = t.retention + '%';
-    el('totalSymbolic').textContent = fmt(t.symbolic);
-    el('totalTables').textContent = `${t.tablesSubmitted}/${t.tablesTotal}`;
+    const showNumbers = state.phase >= NUMBERS_REVEAL_PHASE;
+    el('totalNetwork').textContent = showNumbers ? '+' + fmt(t.network) : '—';
+    el('totalRetention').textContent = showNumbers ? t.retention + '%' : '—';
+    el('totalSymbolic').textContent = showNumbers ? fmt(t.symbolic) : '—';
+    el('totalTables').textContent = showNumbers ? `${t.tablesSubmitted}/${t.tablesTotal}` : `?/${t.tablesTotal}`;
     el('phasePill').textContent = phaseLabel(state.phase);
   }
 
   function renderTableCards() {
     if (!state) return;
+    const showNumbers = state.phase >= NUMBERS_REVEAL_PHASE;
     const left = el('colLeft');
     const right = el('colRight');
     left.innerHTML = '';
     right.innerHTML = '';
     Object.values(state.tables).forEach((t) => {
       const card = document.createElement('div');
-      card.className = 'table-card' + (t.metrics ? ' submitted' : '');
+      card.className = 'table-card' + (showNumbers && t.metrics ? ' submitted' : '');
       card.style.borderLeftColor = t.color;
       card.dataset.tableId = t.id;
       const icon = t.icon ? ICON_EMOJI[t.icon] : '';
       const name = t.teamLeaderName ? t.teamLeaderName : '—';
-      const m = t.metrics;
+      const m = showNumbers ? t.metrics : null;
       card.innerHTML = `
         <div class="tname"><span>${window.t('it', 'table')} ${t.id} ${icon}</span></div>
         <div class="tnums">${name}<br/>${m ? `+${fmt(m.network)} · ${m.retention}% · ${fmt(m.symbolicValue)} ${escapeHtml(m.symbolicLabel || '')}` : '···'}</div>
@@ -231,10 +234,12 @@
       root.classList.add('reveal');
       banner.style.display = 'block';
       banner.textContent = `${window.t('it', 'screen.revealTitle')} · ${window.t('it', 'screen.revealSubtitle')}`;
+      applyRevealSlogan(true);
       startSpotlight();
     } else {
       root.classList.remove('reveal');
       banner.style.display = 'none';
+      applyRevealSlogan(false);
       stopSpotlight();
     }
   }
@@ -260,94 +265,18 @@
     updateRevealMode();
   }
 
-  // ---------- Fase "Vision Reveal": le foto si muovono per formare la scritta ----------
-  // Rasterizza `lines` e restituisce le celle "accese" (dentro una lettera) come
-  // rettangoli {x,y,w,h} in pixel, dentro un'area width x height.
-  function buildScreenTextCells(lines, width, height, cellSize) {
-    const off = document.createElement('canvas');
-    off.width = width; off.height = height;
-    const octx = off.getContext('2d');
-    if (!octx) return [];
-    octx.fillStyle = '#000';
-    octx.fillRect(0, 0, width, height);
-    octx.fillStyle = '#fff';
-    octx.textAlign = 'center';
-    octx.textBaseline = 'middle';
-    const lineHeight = height / lines.length;
-    lines.forEach((line, i) => {
-      let fontSize = Math.round(lineHeight * 0.72);
-      octx.font = `900 ${fontSize}px Segoe UI, Arial`;
-      while (octx.measureText(line).width > width * 0.94 && fontSize > 8) {
-        fontSize -= 3;
-        octx.font = `900 ${fontSize}px Segoe UI, Arial`;
-      }
-      octx.fillText(line, width / 2, lineHeight * i + lineHeight / 2);
-    });
-
-    const cols = Math.max(10, Math.round(width / cellSize));
-    const rows = Math.max(6, Math.round(height / cellSize));
-    const full = octx.getImageData(0, 0, width, height).data;
-    const cellW = width / cols, cellH = height / rows;
-    const cells = [];
-    for (let ry = 0; ry < rows; ry++) {
-      const y0 = Math.floor(ry * cellH), y1 = Math.max(y0 + 1, Math.floor((ry + 1) * cellH));
-      for (let rx = 0; rx < cols; rx++) {
-        const x0 = Math.floor(rx * cellW), x1 = Math.max(x0 + 1, Math.floor((rx + 1) * cellW));
-        let sum = 0, count = 0;
-        for (let y = y0; y < y1; y += 2) {
-          for (let x = x0; x < x1; x += 2) {
-            sum += full[(y * width + x) * 4];
-            count++;
-          }
-        }
-        if (count && sum / count / 255 > 0.5) cells.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
-      }
-    }
-    return cells;
-  }
-
-  // Sposta le tessere già presenti nel mosaico in modo che, viste nel loro insieme,
-  // compongano la scritta "Together we are one". Se non ci sono abbastanza foto per
-  // riempire tutte le lettere, clona quelle esistenti (stesso trucco dell'immagine finale).
-  function startTextFormation() {
-    try {
-      const grid = el('mosaicGrid');
-      const tiles = Array.from(grid.children);
-      if (!tiles.length) return; // nessuna foto: il resto del reveal resta comunque intatto
-      const rect = grid.getBoundingClientRect();
-      const w = Math.round(rect.width), h = Math.round(rect.height);
-      if (!w || !h) return;
-
-      const cells = buildScreenTextCells(['TOGETHER', 'WE ARE ONE'], w, h, 34);
-      if (!cells.length) return;
-
-      grid.classList.add('text-forming');
-      tiles.forEach((tile, i) => {
-        const cell = cells[i % cells.length];
-        tile.style.left = cell.x + 'px';
-        tile.style.top = cell.y + 'px';
-        tile.style.width = cell.w + 'px';
-        tile.style.height = cell.h + 'px';
-      });
-
-      // celle rimaste senza tessera: le riempiamo clonando le foto già arrivate
-      for (let i = tiles.length; i < cells.length; i++) {
-        const src = tiles[i % tiles.length];
-        const clone = src.cloneNode(true);
-        clone.style.animation = 'none';
-        clone.style.opacity = '0';
-        const cell = cells[i];
-        clone.style.left = cell.x + 'px';
-        clone.style.top = cell.y + 'px';
-        clone.style.width = cell.w + 'px';
-        clone.style.height = cell.h + 'px';
-        grid.appendChild(clone);
-        requestAnimationFrame(() => { clone.style.opacity = '1'; });
-      }
-    } catch (e) {
-      // Effetto opzionale: se qualcosa va storto qui, gli altri effetti del reveal
-      // (flash, banner, attenuazione colonne, spotlight) restano comunque attivi.
-      console.error('Formazione scritta fotomosaico non riuscita:', e);
+  // ---------- Fase "Vision Reveal": scritta dietro il mosaico ----------
+  // Durante il reveal la scritta di sfondo cambia da "IF/25" a "Together We Are One".
+  function applyRevealSlogan(active) {
+    const title = el('mosaicTitle');
+    if (active) {
+      title.innerHTML = 'TOGETHER<br/>WE ARE ONE';
+      title.classList.add('reveal-slogan');
+      title.style.display = 'flex'; // sempre visibile nel reveal, anche con molte foto
+    } else {
+      title.innerHTML = 'IF<br/>25';
+      title.classList.remove('reveal-slogan');
+      updateMosaicTitleVisibility();
     }
   }
 
@@ -361,23 +290,51 @@
     flash.className = `flash-overlay show ${kind}`;
   }
 
-  function triggerAssemble() {
+  function triggerAssembleShake() {
     const grid = el('mosaicGrid');
     grid.classList.remove('assembling');
     void grid.offsetWidth;
     grid.classList.add('assembling');
-    triggerFlash('gold');
+  }
+
+  // Prima che le foto "piovano" nel mosaico, un piccolo gruppo ruota al centro dello
+  // schermo per un momento — un elemento decorativo isolato, rimosso da solo: se qualcosa
+  // andasse storto qui non tocca il mosaico vero e proprio.
+  function showSpinCluster(photoUrls) {
+    if (!photoUrls.length) return;
+    const wrap = el('mosaicWrap');
+    if (!wrap) return;
+    const cluster = document.createElement('div');
+    cluster.className = 'spin-cluster';
+    photoUrls.slice(0, 8).forEach((dataUrl, i, arr) => {
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      const angle = (360 / arr.length) * i;
+      const jitter = 34;
+      img.style.setProperty('--jx', Math.round(Math.cos((angle * Math.PI) / 180) * jitter) + 'px');
+      img.style.setProperty('--jy', Math.round(Math.sin((angle * Math.PI) / 180) * jitter) + 'px');
+      img.style.animationDelay = i * 60 + 'ms';
+      cluster.appendChild(img);
+    });
+    wrap.appendChild(cluster);
+    setTimeout(() => cluster.remove(), 1700);
   }
 
   function onPhaseChanged(newPhase, oldPhase) {
     if (oldPhase == null) return; // primo caricamento pagina: non è una transizione da segnalare
     if (newPhase >= PHOTO_REVEAL_PHASE && oldPhase < PHOTO_REVEAL_PHASE) {
-      triggerAssemble(); // scossa del mosaico + flash dorato: effetto "pioggia" in arrivo
-      flushPendingMosaic();
+      triggerFlash('gold');
+      const photoUrls = pendingMosaic
+        .filter((item) => item.type === 'photo')
+        .map((item) => item.photo.dataUrl);
+      showSpinCluster(photoUrls);
+      setTimeout(() => {
+        triggerAssembleShake();
+        flushPendingMosaic();
+      }, 1300);
     }
     if (newPhase === REVEAL_PHASE && oldPhase !== REVEAL_PHASE) {
       triggerFlash('white');
-      setTimeout(startTextFormation, 900);
     }
   }
 
