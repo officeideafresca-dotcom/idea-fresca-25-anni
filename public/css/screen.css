@@ -84,12 +84,16 @@ html, body {
 .recap-rank .pos { font-weight: 900; color: var(--if-gold); width: 1.6em; text-align: center; }
 .recap-rank .name { flex: 1; font-weight: 700; }
 .recap-rank .score { font-weight: 900; font-variant-numeric: tabular-nums; }
-.recap-questions { display: flex; flex-direction: column; gap: 10px; max-width: 900px; margin: 0 auto; width: 100%; }
-.recap-q { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 10px 16px; }
-.recap-q-text { font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; }
-.recap-q-bar { height: 8px; border-radius: 6px; background: rgba(255,255,255,0.12); overflow: hidden; }
-.recap-q-fill { height: 100%; background: var(--if-gold); border-radius: 6px; }
-.recap-q-pct { font-size: 0.78rem; opacity: 0.75; margin-top: 4px; text-align: right; }
+.recap-questions { display: flex; flex-direction: column; gap: 14px; max-width: 900px; margin: 0 auto; width: 100%; }
+.recap-q { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 16px; }
+.recap-q-text { font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; }
+.recap-q-options { display: flex; flex-direction: column; gap: 6px; }
+.recap-opt-row { display: flex; align-items: center; gap: 10px; }
+.recap-opt-label { width: 260px; flex-shrink: 0; font-size: 0.8rem; opacity: 0.9; text-align: right; }
+.recap-opt-bar { flex: 1; height: 14px; border-radius: 7px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.recap-opt-fill { height: 100%; background: rgba(255,255,255,0.4); border-radius: 7px; }
+.recap-opt-fill.correct { background: var(--if-gold); }
+.recap-opt-count { width: 28px; flex-shrink: 0; font-size: 0.78rem; font-weight: 700; opacity: 0.85; }
 
 .mosaic-wrap {
   position: relative;

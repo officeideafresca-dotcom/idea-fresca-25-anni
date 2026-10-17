@@ -39,9 +39,10 @@ function fullStatePayload() {
   };
 }
 
-// Costruisce un riepilogo leggero (classifica + % di risposte corrette per domanda) a
-// partire dai dati grezzi letti dall'endpoint /api/results di Quiz Live: evitiamo di
-// portarci dietro la storia completa delle risposte di ogni giocatore sullo schermo.
+// Costruisce un riepilogo leggero (classifica + quante persone hanno scelto ogni opzione,
+// domanda per domanda) a partire dai dati grezzi letti dall'endpoint /api/results di Quiz
+// Live: evitiamo di portarci dietro la storia completa delle risposte di ogni giocatore
+// sullo schermo, solo i conteggi già calcolati.
 function buildQuizRecap(data) {
   const questions = Array.isArray(data.questions) ? data.questions : [];
   const players = Array.isArray(data.players) ? data.players : [];
@@ -51,14 +52,29 @@ function buildQuizRecap(data) {
     .slice(0, 5)
     .map((p) => ({ nickname: String(p.nickname || '').slice(0, 40), score: p.score || 0 }));
   const questionStats = questions.map((q, i) => {
-    let correct = 0, answered = 0;
+    const options = Array.isArray(q.options) ? q.options.map((o) => String(o || '').slice(0, 80)) : [];
+    const optionCounts = new Array(options.length).fill(0);
+    let answered = 0;
     players.forEach((p) => {
       const h = (p.history || []).find((x) => x.questionIndex === i);
-      if (h) { answered++; if (h.correct) correct++; }
+      if (!h) return;
+      answered++;
+      if (Array.isArray(h.optionIndexes)) {
+        h.optionIndexes.forEach((idx) => { if (optionCounts[idx] != null) optionCounts[idx]++; });
+      } else if (Number.isInteger(h.optionIndex) && optionCounts[h.optionIndex] != null) {
+        optionCounts[h.optionIndex]++;
+      }
     });
+    // Le domande a selezione multipla (correctIndexes) sono spesso di opinione/mindset: non
+    // marchiamo nessuna opzione come "quella giusta" nel grafico, contano solo i voti.
+    const isMulti = Array.isArray(q.correctIndexes);
+    const correctIndexes = isMulti ? [] : (Number.isInteger(q.correctIndex) ? [q.correctIndex] : []);
     return {
       text: String(q.text || '').slice(0, 200),
-      correctPct: answered ? Math.round((correct / answered) * 100) : null,
+      options,
+      optionCounts,
+      correctIndexes,
+      answered,
     };
   });
   return {

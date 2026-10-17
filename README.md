@@ -20,9 +20,10 @@ un QR Code e usano il browser del telefono.
   2. **Visual Challenge**: flash dorato, poi un piccolo gruppo di foto ruota per un istante al
      centro dello schermo, infine tutte le foto accumulate finora "piovono" nel mosaico. Da
      questo momento ogni nuova foto entra subito nel mosaico.
-  3. **Riepilogo Quiz**: il mosaico viene sostituito dalla classifica e dal riepilogo delle
-     risposte del quiz svolto con l'app **Quiz Live** — letti in automatico dal server
-     dell'altra app (vedi sezione **"Collegamento con Quiz Live"** più sotto).
+  3. **Riepilogo Quiz**: il mosaico viene sostituito dalla classifica e, per ogni domanda, da
+     un grafico a barre con quante persone hanno scelto ciascuna opzione (marcata con ✓ quella
+     corretta, dove ha senso) — letti in automatico dal server dell'app **Quiz Live** (vedi
+     sezione **"Collegamento con Quiz Live"** più sotto).
   4. **Vision Reveal**: flash bianco, banner, alone dorato sul mosaico, e la scritta di sfondo
      del mosaico cambia da "IF/25" a **"Together We Are One"**.
 - **Pannello di regia** (`/admin`): pagina separata, protetta da PIN, da aprire sul **tuo

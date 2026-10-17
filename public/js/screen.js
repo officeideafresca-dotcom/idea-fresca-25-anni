@@ -104,13 +104,27 @@
       </div>
     `).join('');
 
-    el('recapQuestions').innerHTML = recap.questionStats.map((q, i) => `
-      <div class="recap-q">
-        <div class="recap-q-text">${i + 1}. ${escapeHtml(q.text)}</div>
-        <div class="recap-q-bar"><div class="recap-q-fill" style="width:${q.correctPct != null ? q.correctPct : 0}%;"></div></div>
-        <div class="recap-q-pct">${q.correctPct != null ? q.correctPct + '% ' + window.t('it', 'screen.recapCorrectLabel') : '—'}</div>
-      </div>
-    `).join('');
+    el('recapQuestions').innerHTML = recap.questionStats.map((q, i) => {
+      const maxCount = Math.max(1, ...q.optionCounts);
+      const rows = q.options.map((opt, oi) => {
+        const count = q.optionCounts[oi] || 0;
+        const pct = Math.round((count / maxCount) * 100);
+        const isCorrect = q.correctIndexes.includes(oi);
+        return `
+          <div class="recap-opt-row">
+            <div class="recap-opt-label">${escapeHtml(opt)}${isCorrect ? ' ✓' : ''}</div>
+            <div class="recap-opt-bar"><div class="recap-opt-fill${isCorrect ? ' correct' : ''}" style="width:${pct}%;"></div></div>
+            <div class="recap-opt-count">${count}</div>
+          </div>
+        `;
+      }).join('');
+      return `
+        <div class="recap-q">
+          <div class="recap-q-text">${i + 1}. ${escapeHtml(q.text)}</div>
+          <div class="recap-q-options">${rows}</div>
+        </div>
+      `;
+    }).join('');
   }
 
   // Fase 0 "Preparazione": foto totalmente nascoste. Fase 1 "Lancio": ogni foto appare
