@@ -16,14 +16,10 @@ const ICONS = ['mountain', 'hands', 'sprout', 'compass', 'rocket', 'star'];
 function makeTable(id) {
   return {
     id,
-    teamLeaderName: '',
-    leaderDeviceId: null, // solo questo dispositivo può inserire/modificare i numeri del tavolo
     lang: null,
     color: TABLE_COLORS[(id - 1) % TABLE_COLORS.length],
     icon: null,
-    metrics: null, // { network: number, retention: number, symbolicValue: number, symbolicLabel: string }
-    metricsSubmittedAt: null,
-    photos: [], // { id, dataUrl, ts }
+    photos: [], // { id, dataUrl, message, ts }
     updatedAt: null,
   };
 }
@@ -45,37 +41,22 @@ function freshState() {
     pausedRemainingSec: null,
     durationSec: DEFAULT_DURATION_SEC,
     tables,
+    quizLiveUrl: '',
+    quizLivePin: '',
+    quizRecap: null, // riepilogo del quiz letto da Quiz Live (vedi fetch-quiz-recap)
   };
 }
 
-function computeTotals(tables) {
-  const list = Object.values(tables);
-  const submitted = list.filter((t) => t.metrics);
-  const network = submitted.reduce((s, t) => s + (t.metrics.network || 0), 0);
-  const retentionAvg = submitted.length
-    ? submitted.reduce((s, t) => s + (t.metrics.retention || 0), 0) / submitted.length
-    : 0;
-  const symbolic = submitted.reduce((s, t) => s + (t.metrics.symbolicValue || 0), 0);
-  const photosCount = list.reduce((s, t) => s + t.photos.length, 0);
-  return {
-    network,
-    retention: Math.round(retentionAvg * 10) / 10,
-    symbolic,
-    tablesSubmitted: submitted.length,
-    tablesTotal: TABLE_COUNT,
-    photosCount,
-  };
+function countPhotos(tables) {
+  return Object.values(tables).reduce((s, t) => s + t.photos.length, 0);
 }
 
 function publicTableSummary(t) {
   return {
     id: t.id,
-    teamLeaderName: t.teamLeaderName,
-    leaderDeviceId: t.leaderDeviceId,
     lang: t.lang,
     color: t.color,
     icon: t.icon,
-    metrics: t.metrics,
     photosCount: t.photos.length,
     updatedAt: t.updatedAt,
   };
@@ -89,7 +70,39 @@ function fullStatePayload() {
     durationSec: state.durationSec,
     pausedRemainingSec: state.pausedRemainingSec,
     tables: state.tables,
-    totals: computeTotals(state.tables),
+    photosTotal: countPhotos(state.tables),
+    quizRecap: state.quizRecap,
+  };
+}
+
+// Costruisce un riepilogo leggero (classifica + % di risposte corrette per domanda) a
+// partire dai dati grezzi letti dall'endpoint /api/results di Quiz Live: evitiamo di
+// portarci dietro la storia completa delle risposte di ogni giocatore sullo schermo.
+function buildQuizRecap(data) {
+  const questions = Array.isArray(data.questions) ? data.questions : [];
+  const players = Array.isArray(data.players) ? data.players : [];
+  const topPlayers = players
+    .slice()
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .slice(0, 5)
+    .map((p) => ({ nickname: String(p.nickname || '').slice(0, 40), score: p.score || 0 }));
+  const questionStats = questions.map((q, i) => {
+    let correct = 0, answered = 0;
+    players.forEach((p) => {
+      const h = (p.history || []).find((x) => x.questionIndex === i);
+      if (h) { answered++; if (h.correct) correct++; }
+    });
+    return {
+      text: String(q.text || '').slice(0, 200),
+      correctPct: answered ? Math.round((correct / answered) * 100) : null,
+    };
+  });
+  return {
+    quizTitle: String(data.quizTitle || 'Quiz').slice(0, 80),
+    totalPlayers: players.length,
+    topPlayers,
+    questionStats,
+    fetchedAt: Date.now(),
   };
 }
 
@@ -172,47 +185,6 @@ io.on('connection', (socket) => {
     socket.emit('init', fullStatePayload());
   });
 
-  socket.on('claim-leader', ({ tableId, deviceId, name }) => {
-    const t = state.tables[tableId];
-    if (!t || !deviceId) return;
-    if (t.leaderDeviceId && t.leaderDeviceId !== deviceId) {
-      socket.emit('leader:claim-error', { tableId, message: 'Questo tavolo ha già un Team Leader' });
-      return;
-    }
-    t.leaderDeviceId = deviceId;
-    if (name) t.teamLeaderName = String(name).slice(0, 60);
-    t.updatedAt = Date.now();
-    io.emit('leader:update', { tableId: t.id, leaderDeviceId: t.leaderDeviceId, teamLeaderName: t.teamLeaderName });
-  });
-
-  socket.on('release-leader', ({ tableId, deviceId }) => {
-    const t = state.tables[tableId];
-    if (!t || t.leaderDeviceId !== deviceId) return;
-    t.leaderDeviceId = null;
-    t.updatedAt = Date.now();
-    io.emit('leader:update', { tableId: t.id, leaderDeviceId: null, teamLeaderName: t.teamLeaderName });
-  });
-
-  socket.on('submit-metrics', ({ tableId, deviceId, teamLeaderName, lang, metrics }) => {
-    const t = state.tables[tableId];
-    if (!t || !metrics) return;
-    if (!t.leaderDeviceId || t.leaderDeviceId !== deviceId) {
-      socket.emit('leader:claim-error', { tableId, message: 'Solo il Team Leader del tavolo può inserire i numeri' });
-      return;
-    }
-    t.teamLeaderName = String(teamLeaderName || t.teamLeaderName || '').slice(0, 60);
-    if (lang) t.lang = lang;
-    t.metrics = {
-      network: clampNumber(metrics.network, 0, 999999),
-      retention: clampNumber(metrics.retention, 0, 100),
-      symbolicValue: clampNumber(metrics.symbolicValue, 0, 9999999),
-      symbolicLabel: String(metrics.symbolicLabel || '').slice(0, 80),
-    };
-    t.metricsSubmittedAt = Date.now();
-    t.updatedAt = Date.now();
-    io.emit('metrics:update', { tableId: t.id, table: publicTableSummary(t), totals: computeTotals(state.tables) });
-  });
-
   socket.on('submit-icon', ({ tableId, icon }) => {
     const t = state.tables[tableId];
     if (!t || !ICONS.includes(icon)) return;
@@ -236,7 +208,7 @@ io.on('connection', (socket) => {
     };
     t.photos.push(photo);
     t.updatedAt = Date.now();
-    io.emit('photo:add', { tableId: t.id, photo, photosCount: t.photos.length, totals: computeTotals(state.tables) });
+    io.emit('photo:add', { tableId: t.id, photo, photosCount: t.photos.length, photosTotal: countPhotos(state.tables) });
   });
 
   socket.on('admin', ({ pin, action, payload }) => {
@@ -310,9 +282,33 @@ io.on('connection', (socket) => {
           const src = source[added % source.length];
           const photo = { id: `test-${Date.now()}-${added}`, dataUrl: src.dataUrl, message: src.message || '', ts: Date.now() };
           t.photos.push(photo); // limite MAX_PHOTOS_PER_TABLE non applicato: è un riempimento di test
-          io.emit('photo:add', { tableId: t.id, photo, photosCount: t.photos.length, totals: computeTotals(state.tables) });
+          io.emit('photo:add', { tableId: t.id, photo, photosCount: t.photos.length, photosTotal: countPhotos(state.tables) });
           added++;
         }
+        return;
+      }
+      // Collegamento tecnico con l'app Quiz Live: legge il riepilogo in diretta
+      // dall'endpoint /api/results (protetto dal PIN admin di Quiz Live) e lo
+      // trasmette a schermo/admin. Da richiamare quando si passa alla fase "Riepilogo Quiz".
+      case 'fetch-quiz-recap': {
+        const quizLiveUrl = String((payload && payload.quizLiveUrl) || '').trim().replace(/\/+$/, '');
+        const quizLivePin = String((payload && payload.quizLivePin) || '').trim();
+        if (!quizLiveUrl || !quizLivePin) {
+          socket.emit('admin:error', { message: 'Inserisci URL e PIN di Quiz Live', code: 'quiz_recap_missing' });
+          return;
+        }
+        state.quizLiveUrl = quizLiveUrl;
+        state.quizLivePin = quizLivePin;
+        fetch(`${quizLiveUrl}/api/results?pin=${encodeURIComponent(quizLivePin)}`)
+          .then((r) => { if (!r.ok) throw new Error('http_' + r.status); return r.json(); })
+          .then((data) => {
+            state.quizRecap = buildQuizRecap(data);
+            io.emit('quiz-recap:update', state.quizRecap);
+            socket.emit('quiz-recap:fetch-ok', { fetchedAt: state.quizRecap.fetchedAt });
+          })
+          .catch(() => {
+            socket.emit('admin:error', { message: 'Impossibile leggere i risultati da Quiz Live: controlla URL e PIN', code: 'quiz_recap_failed' });
+          });
         return;
       }
       default:
@@ -327,12 +323,6 @@ io.on('connection', (socket) => {
     });
   });
 });
-
-function clampNumber(v, min, max) {
-  const n = Number(v);
-  if (Number.isNaN(n)) return 0;
-  return Math.min(max, Math.max(min, n));
-}
 
 server.listen(PORT, () => {
   const base = process.env.RENDER_EXTERNAL_URL || `http://${getLocalIPs()[0] || 'localhost'}:${PORT}`;

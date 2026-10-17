@@ -5,32 +5,49 @@ Nessuna installazione: i partecipanti scansionano un QR Code e usano il browser 
 
 ## Come funziona
 
-- **Partecipanti** (`/`): scelgono il tavolo (1–10). **Solo la prima persona che si dichiara
-  "Team Leader" per quel tavolo** può inserire/modificare i 3 numeri chiave della visione
-  2027–2028 (bloccato anche lato server, non solo nell'interfaccia) — tutti gli altri al tavolo
-  vedono i numeri in sola lettura, ma possono comunque caricare foto e icone. Ogni foto richiede
-  un **Power Message** obbligatorio: una frase che compare come "bolla" fluttuante in posizione
-  casuale sullo schermo grande per 3 secondi (esattamente come le foto in fase "Lancio"), poi
-  sparisce — la foto stessa resta sempre pulita, senza testo sopra, sia nel mosaico live sia
-  nell'immagine finale esportata. Interfaccia automatica in IT/DE/FR/ES (rilevata dalla lingua
-  del telefono, cambiabile a mano).
+- **Partecipanti** (`/`): scelgono il tavolo (1–10), scattano/caricano una foto di squadra e
+  scelgono un'icona simbolica per il gruppo. Ogni foto richiede un **Power Message** obbligatorio:
+  una frase che compare come "bolla" fluttuante in posizione casuale sullo schermo grande per 3
+  secondi (esattamente come le foto in fase "Lancio"), poi sparisce — la foto stessa resta sempre
+  pulita, senza testo sopra, sia nel mosaico live sia nell'immagine finale esportata. Interfaccia
+  automatica in IT/DE/FR/ES (rilevata dalla lingua del telefono, cambiabile a mano).
 - **Schermo grande** (`/screen`): è una vista **di sola visualizzazione**, senza alcun
   controllo — pensata per essere proiettata davanti a tutti senza mostrare pulsanti o PIN. Le
   4 fasi (gestite dal pannello admin):
-  1. **Lancio** (appena premi "Avvia"): QR sparisce, appare la dashboard. I numeri restano
-     nascosti (mostrano "—"). Ogni foto inviata compare per 3 secondi in una posizione casuale
-     dello schermo, poi sparisce (non entra ancora nel mosaico).
+  1. **Lancio** (appena premi "Avvia"): QR sparisce, appare la dashboard. Ogni foto inviata
+     compare per 3 secondi in una posizione casuale dello schermo, poi sparisce (non entra
+     ancora nel mosaico).
   2. **Visual Challenge**: flash dorato, poi un piccolo gruppo di foto ruota per un istante al
      centro dello schermo, infine tutte le foto accumulate finora "piovono" nel mosaico. Da
-     questo momento ogni nuova foto entra subito nel mosaico. I numeri restano ancora nascosti.
-  3. **Sfida Numerica**: da qui i numeri (totali e per tavolo) diventano visibili; il mosaico
-     resta come si è formato.
-  4. **Vision Reveal**: flash bianco, banner, colonne laterali attenuate/desaturate, alone
-     dorato sul mosaico, spotlight sui tavoli, e la scritta di sfondo del mosaico cambia da
-     "IF/25" a **"Together We Are One"**.
+     questo momento ogni nuova foto entra subito nel mosaico.
+  3. **Riepilogo Quiz**: il mosaico viene sostituito dalla classifica e dal riepilogo delle
+     risposte del quiz svolto con l'app **Quiz Live** — letti in automatico dal server
+     dell'altra app (vedi sezione **"Collegamento con Quiz Live"** più sotto).
+  4. **Vision Reveal**: flash bianco, banner, alone dorato sul mosaico, e la scritta di sfondo
+     del mosaico cambia da "IF/25" a **"Together We Are One"**.
 - **Pannello di regia** (`/admin`): pagina separata, protetta da PIN, da aprire sul **tuo
   telefono o laptop personale** (non sul maxischermo). Da qui avvii/metti in pausa il timer,
-  cambi fase manualmente, resetti i dati e scarichi l'immagine finale.
+  cambi fase manualmente, carichi il riepilogo del quiz, resetti i dati e scarichi l'immagine
+  finale.
+
+## Collegamento con Quiz Live
+
+Questa app può leggere in automatico, via HTTP, il riepilogo del quiz svolto con l'app separata
+[Quiz Live](https://github.com) (classifica e % di risposte corrette per domanda), senza bisogno
+di inserire nulla a mano:
+
+1. Apri `/admin` qui su Idea Fresca, nel box **"Collega Quiz Live"**.
+2. Inserisci l'URL pubblico dell'app Quiz Live (es. `https://quiz-live-xxxx.onrender.com`) e il
+   suo **PIN Admin** (quello configurato su quell'app, non necessariamente lo stesso di questa).
+3. Premi **"Carica riepilogo quiz"**: il server di Idea Fresca chiama
+   `GET <url-quiz-live>/api/results?pin=<pin>` sull'altra app, costruisce il riepilogo e lo
+   trasmette in tempo reale allo schermo grande.
+4. Passa alla fase **"Riepilogo Quiz"** per mostrarlo: puoi ricaricarlo più volte (es. dopo che
+   altre domande sono state fatte) premendo di nuovo il bottone.
+
+URL e PIN restano salvati nel browser dell'admin per i caricamenti successivi. Se il fetch
+fallisce, controlla che l'URL sia corretto e che l'altra app Render non sia "addormentata" (vedi
+nota sul piano gratuito più sotto, vale per entrambe le app).
 
 Tutto è **in tempo reale** (Socket.IO): quando un tavolo invia i numeri o una foto, lo schermo
 grande e i telefoni di tutti gli altri si aggiornano istantaneamente.
@@ -77,14 +94,13 @@ $env:PORT=3000; $env:ADMIN_PIN=1234; npm start
 1. Prima dell'evento: lancia il server sul PC regia, apri `/screen` sul maxischermo, e apri
    `/admin` sul tuo telefono/laptop personale (inserisci il PIN admin per sbloccare i comandi).
 2. Proietta il QR (fase "Lancio"): gli 80 partecipanti scansionano ed entrano su `/`.
-3. Dal pannello `/admin` premi **Avvia** per far partire il countdown (durata configurabile) e
-   passare alla fase "Sfida Numerica" — nulla di questo è visibile sul maxischermo.
-4. I tavoli inseriscono i numeri e caricano le foto dai propri telefoni: tutto appare live sul
-   maxischermo (contatori che salgono, foto che appaiono e si aggiungono al mosaico).
-5. Usa i pulsanti di fase nel pannello `/admin` per passare a "Assemblaggio" e infine
-   "Vision Reveal" (attiva lo zoom a spirale sulle 10 card e il banner finale). Il countdown a
-   30 minuti si ferma da solo a 00:00 ma **non cambia fase automaticamente**: sei sempre tu a
-   decidere quando far avanzare l'evento.
+3. Dal pannello `/admin` premi **Avvia** per far partire il countdown (durata configurabile).
+4. I tavoli caricano le foto dai propri telefoni: tutto appare live sul maxischermo (foto che
+   appaiono e si aggiungono al mosaico).
+5. Usa i pulsanti di fase nel pannello `/admin` per passare a "Riepilogo Quiz" (dopo aver
+   caricato i risultati di Quiz Live, vedi sopra) e infine "Vision Reveal" (attiva il fotomosaico
+   finale e il banner). Il countdown si ferma da solo a 00:00 ma **non cambia fase
+   automaticamente**: sei sempre tu a decidere quando far avanzare l'evento.
 6. Dal pannello `/admin` premi **Salva e invia a tutti i telefoni**: scarica un PNG in alta
    qualità sul tuo dispositivo (mosaico + numeri totali) e, allo stesso tempo, mostra
    l'immagine finale direttamente sul telefono di tutti i partecipanti ancora collegati, con un

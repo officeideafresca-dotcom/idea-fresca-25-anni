@@ -4,6 +4,10 @@
 
   let state = null;
   let pin = localStorage.getItem('if25_admin_pin') || '';
+  const savedQuizLiveUrl = localStorage.getItem('if25_quizlive_url') || '';
+  const savedQuizLivePin = localStorage.getItem('if25_quizlive_pin') || '';
+  if (savedQuizLiveUrl) el('quizLiveUrlInput').value = savedQuizLiveUrl;
+  if (savedQuizLivePin) el('quizLivePinInput').value = savedQuizLivePin;
 
   function fmt(n) { return Number(n || 0).toLocaleString('it-IT'); }
 
@@ -26,8 +30,7 @@
     if (!state) return;
     const labels = phaseLabels();
     el('stPhase').textContent = labels[state.phase] || labels[0];
-    el('stTables').textContent = `${state.totals.tablesSubmitted}/${state.totals.tablesTotal}`;
-    el('stNetwork').textContent = '+' + fmt(state.totals.network);
+    el('stPhotos').textContent = fmt(state.photosTotal || 0);
     el('btnPauseResume').textContent = state.status === 'paused'
       ? window.t('it', 'screen.resumeButton')
       : window.t('it', 'screen.pauseButton');
@@ -56,19 +59,17 @@
   }
 
   socket.on('init', (st) => { state = st; renderStatus(); });
-  socket.on('metrics:update', (p) => {
-    if (!state) return;
-    // il server manda un riepilogo senza `photos`: uniamo per non perdere l'array locale
-    state.tables[p.tableId] = Object.assign({}, state.tables[p.tableId], p.table);
-    state.totals = p.totals;
-    renderStatus();
-  });
   socket.on('photo:add', (p) => {
     if (!state) return;
     const t = state.tables[p.tableId];
     if (t) { if (!t.photos) t.photos = []; t.photos.push(p.photo); }
-    state.totals = p.totals;
+    state.photosTotal = p.photosTotal;
     renderStatus();
+  });
+  socket.on('quiz-recap:fetch-ok', () => {
+    const status = el('recapStatus');
+    status.textContent = 'Riepilogo quiz caricato ✓';
+    setTimeout(() => { status.textContent = ''; }, 6000);
   });
   socket.on('phase:update', (p) => { if (state) { Object.assign(state, p); renderStatus(); } });
   socket.on('reset', () => socket.emit('request-state'));
@@ -84,6 +85,10 @@
       el('controls').style.display = 'none';
       localStorage.removeItem('if25_admin_pin');
       pin = '';
+    } else if (e.code === 'quiz_recap_missing' || e.code === 'quiz_recap_failed') {
+      el('recapStatus').style.color = '#ff9a86';
+      el('recapStatus').textContent = e.message;
+      setTimeout(() => { el('recapStatus').textContent = ''; el('recapStatus').style.color = '#8fd9a8'; }, 6000);
     } else {
       alert(e.message);
     }
@@ -117,6 +122,15 @@
   // TEMPORANEO - SOLO PER TEST: rimuovere insieme al bottone in admin.html prima dell'evento reale
   el('btnTestFill').addEventListener('click', () => {
     sendAdmin('test-fill-photos', { count: 80 });
+  });
+
+  el('btnFetchRecap').addEventListener('click', () => {
+    const quizLiveUrl = el('quizLiveUrlInput').value.trim();
+    const quizLivePin = el('quizLivePinInput').value.trim();
+    if (!quizLiveUrl || !quizLivePin) { alert('Inserisci URL e PIN di Quiz Live'); return; }
+    localStorage.setItem('if25_quizlive_url', quizLiveUrl);
+    localStorage.setItem('if25_quizlive_pin', quizLivePin);
+    sendAdmin('fetch-quiz-recap', { quizLiveUrl, quizLivePin });
   });
 
   el('btnSaveImage').addEventListener('click', composeSaveAndBroadcastImage);
@@ -167,21 +181,9 @@
     ctx.fillStyle = '#ffffffcc';
     ctx.fillText('La nostra visione, costruita da tutti noi', 800, 128);
 
-    const t = state.totals;
-    ctx.font = '900 40px Segoe UI, Arial';
-    ctx.fillStyle = '#c79a2b';
-    ctx.fillText(`+${fmt(t.network)}`, 350, 200);
-    ctx.fillText(`${t.retention}%`, 800, 200);
-    ctx.fillText(`${fmt(t.symbolic)}`, 1250, 200);
-    ctx.font = '500 18px Segoe UI, Arial';
-    ctx.fillStyle = '#ffffffaa';
-    ctx.fillText('Nuovi Partner di Rete', 350, 228);
-    ctx.fillText('Fidelizzazione Media', 800, 228);
-    ctx.fillText("Azioni d'Impatto 25°", 1250, 228);
-
     const photos = [];
     Object.values(state.tables).forEach((tb) => (tb.photos || []).forEach((p) => photos.push(p.dataUrl)));
-    const gridTop = 270;
+    const gridTop = 170;
     const gridW = 1600;
     const gridH = 900 - gridTop - 60;
 

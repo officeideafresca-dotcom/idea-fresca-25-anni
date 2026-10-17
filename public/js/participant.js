@@ -9,11 +9,6 @@
   let selectedIcon = null;
   let pendingPhotoDataUrl = null;
   let latestState = null;
-  let deviceId = localStorage.getItem('if25_device_id');
-  if (!deviceId) {
-    deviceId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    localStorage.setItem('if25_device_id', deviceId);
-  }
 
   const el = (id) => document.getElementById(id);
   const socket = io();
@@ -25,10 +20,6 @@
     toast.textContent = msg;
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 2200);
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
   function renderLangSwitch() {
@@ -50,26 +41,6 @@
     el('selectTableTitle').textContent = T('selectTable');
     el('yourTableLabel').textContent = T('yourTable');
     el('changeTableBtn').textContent = T('changeTable');
-    el('metricsTitle').textContent = T('metricsTitle');
-    el('metricsSubtitle').textContent = T('metricsSubtitle');
-    el('claimExplainText').textContent = T('claimExplainText');
-    el('claimNameInput').placeholder = T('leaderNamePlaceholder');
-    el('claimLeaderBtn').textContent = T('claimLeaderBtn');
-    el('releaseLeaderBtn').textContent = T('releaseLeaderBtn');
-    el('leaderNameLabel').textContent = T('leaderNameLabel');
-    el('leaderName').placeholder = T('leaderNamePlaceholder');
-    el('metric1Label').textContent = T('metric1Label');
-    el('metric1Help').textContent = T('metric1Help');
-    el('metric1Unit').textContent = T('metric1Unit');
-    el('metric2Label').textContent = T('metric2Label');
-    el('metric2Help').textContent = T('metric2Help');
-    el('metric2Unit').textContent = T('metric2Unit');
-    el('metric3Label').textContent = T('metric3Label');
-    el('metric3Help').textContent = T('metric3Help');
-    el('metric3Value').placeholder = T('metric3ValuePlaceholder');
-    el('metric3Label_').placeholder = T('metric3LabelPlaceholder');
-    el('submitMetricsBtn').textContent = T('submitMetrics');
-    el('metricsSavedNote').textContent = T('metricsSaved');
     el('photoTitle').textContent = T('photoTitle');
     el('photoSubtitle').textContent = T('photoSubtitle');
     el('takePhotoBtn').textContent = T('takePhoto');
@@ -78,11 +49,6 @@
     el('powerMessageInput').placeholder = T('powerMessagePlaceholder');
     el('sendPhotoBtn').textContent = T('sendPhoto');
     el('chooseIconLabel').textContent = T('chooseIcon');
-    el('liveTotalsLabel').textContent = T('liveTotals');
-    el('lt1Label').textContent = T('screen.newPartners');
-    el('lt2Label').textContent = T('screen.retention');
-    el('lt3Label').textContent = T('screen.symbolicTotal');
-    el('lt4Label').textContent = T('screen.tablesIn');
     el('finalImageTitle').textContent = T('finalImageTitle');
     el('finalImageHint').textContent = T('finalImageHint');
     el('finalImageSaveBtn').textContent = T('finalImageSave');
@@ -91,7 +57,6 @@
     renderTableGrid();
     updateStatusBadge();
     updatePhotoCount();
-    renderLeaderSection();
   }
 
   function renderTableGrid() {
@@ -137,60 +102,9 @@
     if (!latestState || !tableId) return;
     const t = latestState.tables[tableId];
     if (!t) return;
-    if (t.teamLeaderName) el('leaderName').value = t.teamLeaderName;
-    if (t.metrics) {
-      el('metric1').value = t.metrics.network ?? '';
-      el('metric2').value = t.metrics.retention ?? '';
-      el('metric3Value').value = t.metrics.symbolicValue ?? '';
-      el('metric3Label_').value = t.metrics.symbolicLabel ?? '';
-      el('metricsSavedNote').classList.add('show');
-    }
     if (t.icon) selectedIcon = t.icon;
     renderIconGrid();
     updatePhotoCount(t.photosCount);
-    renderLeaderSection();
-  }
-
-  // Mostra: box "rivendica il ruolo" / form completo (se sono il leader) / sola lettura (se lo è un altro)
-  function renderLeaderSection() {
-    if (!tableId || !latestState) return;
-    const t = latestState.tables[tableId];
-    if (!t) return;
-    const claimBox = el('leaderClaimBox');
-    const formBox = el('leaderFormBox');
-    const readonlyBox = el('leaderReadonlyBox');
-
-    if (!t.leaderDeviceId) {
-      claimBox.style.display = 'block';
-      formBox.style.display = 'none';
-      readonlyBox.style.display = 'none';
-    } else if (t.leaderDeviceId === deviceId) {
-      claimBox.style.display = 'none';
-      formBox.style.display = 'block';
-      readonlyBox.style.display = 'none';
-    } else {
-      claimBox.style.display = 'none';
-      formBox.style.display = 'none';
-      readonlyBox.style.display = 'block';
-      const name = t.teamLeaderName || '';
-      el('readonlyLeaderText').textContent = name
-        ? T('leaderManagedBy').replace('{name}', name)
-        : T('leaderManagedByUnknown');
-      const box = el('readonlyMetricsBox');
-      if (t.metrics) {
-        const m = t.metrics;
-        box.innerHTML = `
-          <div class="stat"><span>${escapeHtml(T('metric1Label'))}</span><b>+${m.network}</b></div>
-          <div class="stat"><span>${escapeHtml(T('metric2Label'))}</span><b>${m.retention}%</b></div>
-          <div class="stat"><span>${escapeHtml(T('metric3Label'))}</span><b>${m.symbolicValue} ${escapeHtml(m.symbolicLabel || '')}</b></div>
-        `;
-      } else {
-        box.innerHTML = `<div class="stat"><span>${escapeHtml(T('metricsPending'))}</span></div>`;
-      }
-    }
-
-    // La scelta dell'icona di gruppo è riservata al Team Leader, come i numeri
-    el('iconSection').style.display = t.leaderDeviceId === deviceId ? 'block' : 'none';
   }
 
   function updatePhotoCount(count) {
@@ -217,47 +131,6 @@
       badge.className = 'status-badge';
     }
   }
-
-  function updateLiveTicker() {
-    if (!latestState) return;
-    const t = latestState.totals;
-    el('lt1Value').textContent = '+' + t.network.toLocaleString(lang);
-    el('lt2Value').textContent = t.retention + '%';
-    el('lt3Value').textContent = t.symbolic.toLocaleString(lang);
-    el('lt4Value').textContent = `${t.tablesSubmitted} / ${t.tablesTotal}`;
-  }
-
-  // ---- Rivendicazione ruolo Team Leader ----
-  el('claimLeaderBtn').addEventListener('click', () => {
-    if (!tableId) return;
-    const name = el('claimNameInput').value.trim();
-    if (!name) {
-      showToast(T('leaderNameRequired'));
-      el('claimNameInput').focus();
-      return;
-    }
-    socket.emit('claim-leader', { tableId, deviceId, name });
-  });
-
-  el('releaseLeaderBtn').addEventListener('click', () => {
-    if (!tableId) return;
-    if (!confirm(T('releaseLeaderConfirm'))) return;
-    socket.emit('release-leader', { tableId, deviceId });
-  });
-
-  // ---- Metrics submit ----
-  el('submitMetricsBtn').addEventListener('click', () => {
-    if (!tableId) return;
-    const metrics = {
-      network: Number(el('metric1').value) || 0,
-      retention: Number(el('metric2').value) || 0,
-      symbolicValue: Number(el('metric3Value').value) || 0,
-      symbolicLabel: el('metric3Label_').value || '',
-    };
-    socket.emit('submit-metrics', { tableId, deviceId, teamLeaderName: el('leaderName').value, lang, metrics });
-    el('metricsSavedNote').classList.add('show');
-    showToast(T('metricsSaved'));
-  });
 
   // ---- Photo capture (in due passi: scegli foto -> scrivi Power Message -> invia) ----
   el('takePhotoBtn').addEventListener('click', () => el('photoInput').click());
@@ -334,33 +207,13 @@
   socket.on('init', (st) => {
     latestState = st;
     updateStatusBadge();
-    updateLiveTicker();
     if (tableId) prefillFromState();
-  });
-  socket.on('metrics:update', (payload) => {
-    if (latestState) { latestState.tables[payload.tableId] = payload.table; latestState.totals = payload.totals; }
-    updateLiveTicker();
-    if (String(payload.tableId) === String(tableId)) renderLeaderSection();
   });
   socket.on('photo:add', (payload) => {
     if (latestState && latestState.tables[payload.tableId]) {
       latestState.tables[payload.tableId].photosCount = payload.photosCount;
-      latestState.totals = payload.totals;
     }
-    updateLiveTicker();
     if (String(payload.tableId) === String(tableId)) updatePhotoCount(payload.photosCount);
-  });
-  socket.on('leader:update', (payload) => {
-    if (latestState && latestState.tables[payload.tableId]) {
-      latestState.tables[payload.tableId].leaderDeviceId = payload.leaderDeviceId;
-      latestState.tables[payload.tableId].teamLeaderName = payload.teamLeaderName;
-    }
-    if (String(payload.tableId) === String(tableId)) renderLeaderSection();
-  });
-  socket.on('leader:claim-error', (payload) => {
-    if (String(payload.tableId) !== String(tableId)) return;
-    showToast(T('leaderClaimError'));
-    renderLeaderSection();
   });
   socket.on('phase:update', (p) => {
     if (latestState) Object.assign(latestState, p);

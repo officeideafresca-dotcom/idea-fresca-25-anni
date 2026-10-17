@@ -4,16 +4,14 @@
   const el = (id) => document.getElementById(id);
   const socket = io();
 
-  // Fasi: 0 Preparazione, 1 Lancio, 2 Visual Challenge, 3 Sfida Numerica, 4 Vision Reveal
+  // Fasi: 0 Preparazione, 1 Lancio, 2 Visual Challenge, 3 Riepilogo Quiz, 4 Vision Reveal
   const PHOTO_REVEAL_PHASE = 2; // "Visual Challenge": da qui le foto entrano nel mosaico
-  const NUMBERS_REVEAL_PHASE = 3; // "Sfida Numerica": da qui si vedono i numeri dei tavoli
+  const QUIZ_RECAP_PHASE = 3; // "Riepilogo Quiz": da qui si vede il riepilogo di Quiz Live
   const REVEAL_PHASE = 4; // "Vision Reveal"
 
   let state = null;
   let popQueue = [];
   let popBusy = false;
-  let spotlightTimer = null;
-  let spotlightIndex = 1;
   let rotateIndex = 0;
   let pendingMosaic = []; // { type: 'photo'|'icon', tableId, photo?, icon? } in attesa della fase giusta
   const mosaicIconTiles = {}; // tableId -> DOM element (icon placeholder tile, one per table)
@@ -61,11 +59,11 @@
 
   function fmt(n) { return Number(n || 0).toLocaleString('it-IT'); }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
   function renderTopLabels() {
-    el('lblNetwork').textContent = window.t('it', 'screen.newPartners');
-    el('lblRetention').textContent = window.t('it', 'screen.retention');
-    el('lblSymbolic').textContent = window.t('it', 'screen.symbolicTotal');
-    el('lblTables').textContent = window.t('it', 'screen.tablesIn');
     el('launchCta').textContent = window.t('it', 'screen.scanCta');
   }
 
@@ -74,42 +72,47 @@
     return labels[phase] || labels[0];
   }
 
-  function renderTotals() {
+  function renderPhasePill() {
     if (!state) return;
-    const t = state.totals;
-    const showNumbers = state.phase >= NUMBERS_REVEAL_PHASE;
-    el('totalNetwork').textContent = showNumbers ? '+' + fmt(t.network) : '—';
-    el('totalRetention').textContent = showNumbers ? t.retention + '%' : '—';
-    el('totalSymbolic').textContent = showNumbers ? fmt(t.symbolic) : '—';
-    el('totalTables').textContent = showNumbers ? `${t.tablesSubmitted}/${t.tablesTotal}` : `?/${t.tablesTotal}`;
     el('phasePill').textContent = phaseLabel(state.phase);
   }
 
-  function renderTableCards() {
+  // Fase "Riepilogo Quiz": sostituisce il mosaico con la classifica e il riepilogo delle
+  // risposte, letti in automatico dal server di Quiz Live (collegamento tra le due app).
+  function renderQuizRecap() {
     if (!state) return;
-    const showNumbers = state.phase >= NUMBERS_REVEAL_PHASE;
-    const left = el('colLeft');
-    const right = el('colRight');
-    left.innerHTML = '';
-    right.innerHTML = '';
-    Object.values(state.tables).forEach((t) => {
-      const card = document.createElement('div');
-      card.className = 'table-card' + (showNumbers && t.metrics ? ' submitted' : '');
-      card.style.borderLeftColor = t.color;
-      card.dataset.tableId = t.id;
-      const icon = t.icon ? ICON_EMOJI[t.icon] : '';
-      const name = t.teamLeaderName ? t.teamLeaderName : '—';
-      const m = showNumbers ? t.metrics : null;
-      card.innerHTML = `
-        <div class="tname"><span>${window.t('it', 'table')} ${t.id} ${icon}</span></div>
-        <div class="tnums">${name}<br/>${m ? `+${fmt(m.network)} · ${m.retention}% · ${fmt(m.symbolicValue)} ${escapeHtml(m.symbolicLabel || '')}` : '···'}</div>
-      `;
-      if (t.id <= 5) left.appendChild(card); else right.appendChild(card);
-    });
-  }
+    const showRecap = state.phase === QUIZ_RECAP_PHASE;
+    el('quizRecap').style.display = showRecap ? 'flex' : 'none';
+    el('mosaicWrap').style.display = showRecap ? 'none' : 'flex';
+    if (!showRecap) return;
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const recap = state.quizRecap;
+    if (!recap) {
+      el('recapTitle').textContent = phaseLabel(QUIZ_RECAP_PHASE);
+      el('recapSub').textContent = window.t('it', 'screen.recapWaiting');
+      el('recapPodium').innerHTML = '';
+      el('recapQuestions').innerHTML = '';
+      return;
+    }
+
+    el('recapTitle').textContent = recap.quizTitle;
+    el('recapSub').textContent = `${recap.totalPlayers} ${window.t('it', 'screen.recapPlayersLabel')}`;
+
+    el('recapPodium').innerHTML = recap.topPlayers.map((p, i) => `
+      <div class="recap-rank">
+        <span class="pos">${i + 1}</span>
+        <span class="name">${escapeHtml(p.nickname)}</span>
+        <span class="score">${fmt(p.score)}</span>
+      </div>
+    `).join('');
+
+    el('recapQuestions').innerHTML = recap.questionStats.map((q, i) => `
+      <div class="recap-q">
+        <div class="recap-q-text">${i + 1}. ${escapeHtml(q.text)}</div>
+        <div class="recap-q-bar"><div class="recap-q-fill" style="width:${q.correctPct != null ? q.correctPct : 0}%;"></div></div>
+        <div class="recap-q-pct">${q.correctPct != null ? q.correctPct + '% ' + window.t('it', 'screen.recapCorrectLabel') : '—'}</div>
+      </div>
+    `).join('');
   }
 
   // Fase 0 "Preparazione": foto totalmente nascoste. Fase 1 "Lancio": ogni foto appare
@@ -236,9 +239,7 @@
     if (popBusy || !popQueue.length) return;
     popBusy = true;
     const { tableId, photo } = popQueue.shift();
-    const t = state.tables[tableId];
     el('photoPopMedia').innerHTML = `<img src="${photo.dataUrl}" alt="" />`;
-    el('photoPopName').textContent = (t && t.teamLeaderName) || '';
     el('photoPopTable').textContent = `${window.t('it', 'table')} ${tableId}`;
     el('photoPop').classList.add('show');
     setTimeout(() => {
@@ -291,33 +292,17 @@
       banner.style.display = 'block';
       banner.textContent = `${window.t('it', 'screen.revealTitle')} · ${window.t('it', 'screen.revealSubtitle')}`;
       applyRevealSlogan(true);
-      startSpotlight();
     } else {
       root.classList.remove('reveal');
       banner.style.display = 'none';
       applyRevealSlogan(false);
       clearRevealMosaic();
-      stopSpotlight();
     }
   }
 
-  function startSpotlight() {
-    if (spotlightTimer) return;
-    spotlightTimer = setInterval(() => {
-      document.querySelectorAll('.table-card.spotlight').forEach((c) => c.classList.remove('spotlight'));
-      const card = document.querySelector(`.table-card[data-table-id="${spotlightIndex}"]`);
-      if (card) card.classList.add('spotlight');
-      spotlightIndex = (spotlightIndex % 10) + 1;
-    }, 1400);
-  }
-  function stopSpotlight() {
-    if (spotlightTimer) { clearInterval(spotlightTimer); spotlightTimer = null; }
-    document.querySelectorAll('.table-card.spotlight').forEach((c) => c.classList.remove('spotlight'));
-  }
-
   function fullRender() {
-    renderTotals();
-    renderTableCards();
+    renderPhasePill();
+    renderQuizRecap();
     updateOverlayVisibility();
     updateRevealMode();
   }
@@ -552,21 +537,12 @@
     // il fotomosaico va generato subito: non c'è nessuna transizione di fase da intercettare.
     if (st.phase >= REVEAL_PHASE) setTimeout(renderRevealMosaic, 300);
   });
-  socket.on('metrics:update', (payload) => {
-    if (!state) return;
-    // il server manda un riepilogo senza `photos`: uniamo per non perdere l'array locale
-    state.tables[payload.tableId] = Object.assign({}, state.tables[payload.tableId], payload.table);
-    state.totals = payload.totals;
-    renderTotals();
-    renderTableCards();
-  });
   socket.on('icon:update', (payload) => {
     if (!state) return;
     const t = state.tables[payload.tableId];
     if (!t) return;
     const hadPhotos = t.photos && t.photos.length > 0;
     t.icon = payload.icon;
-    renderTableCards();
     if (!hadPhotos) {
       // le icone (a differenza delle foto) non hanno un'anteprima da "spargere" in fase 1:
       // restano semplicemente in coda finché non si entra in "Visual Challenge"
@@ -578,8 +554,6 @@
     if (!state) return;
     const t = state.tables[payload.tableId];
     if (t) { if (!t.photos) t.photos = []; t.photos.push(payload.photo); }
-    state.totals = payload.totals;
-    renderTotals();
     showScatterMessage(payload.photo.message); // il Power Message compare sempre, in ogni fase
     const mode = photoPhaseMode();
     if (mode === 'live') {
@@ -588,6 +562,11 @@
       pendingMosaic.push({ type: 'photo', tableId: payload.tableId, photo: payload.photo });
       if (mode === 'scatter') showScatterPhoto(payload.photo.dataUrl);
     }
+  });
+  socket.on('quiz-recap:update', (recap) => {
+    if (!state) return;
+    state.quizRecap = recap;
+    renderQuizRecap();
   });
   socket.on('phase:update', (p) => {
     if (!state) return;

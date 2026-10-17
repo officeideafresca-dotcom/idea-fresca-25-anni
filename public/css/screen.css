@@ -43,38 +43,40 @@ html, body {
   color: var(--if-gold);
   letter-spacing: 1px;
 }
-/* ---------- Totals band ---------- */
-.totals-band {
-  display: flex; justify-content: center; gap: 60px;
-  padding: 14px 20px;
-  background: linear-gradient(90deg, rgba(199,154,43,0.18), rgba(199,154,43,0.05));
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.totals-band .stat { text-align: center; }
-.totals-band .stat .value { font-size: 2.1rem; font-weight: 900; color: var(--if-gold); font-variant-numeric: tabular-nums; }
-.totals-band .stat .label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.85; }
-
-/* ---------- Main grid ---------- */
+/* ---------- Main area ---------- */
 .main-area {
   flex: 1;
   display: grid;
-  grid-template-columns: 220px 1fr 220px;
-  gap: 14px;
+  grid-template-columns: 1fr;
   padding: 14px 20px 20px;
   overflow: hidden;
 }
-.side-col { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-.table-card {
-  border-radius: 12px;
-  padding: 10px 12px;
-  background: rgba(255,255,255,0.06);
-  border-left: 5px solid #888;
-  transition: all 0.3s ease;
+
+/* ---------- Riepilogo Quiz (fase 3): classifica e risposte lette da Quiz Live ---------- */
+.quiz-recap {
+  border-radius: 18px;
+  background: rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 32px;
+  overflow: hidden;
+  gap: 14px;
 }
-.table-card.submitted { background: rgba(255,255,255,0.11); }
-.table-card .tname { font-size: 0.85rem; font-weight: 700; display:flex; justify-content: space-between; }
-.table-card .tnums { font-size: 0.72rem; opacity: 0.85; margin-top: 3px; line-height: 1.5; }
-.table-card.spotlight { transform: scale(1.08); box-shadow: 0 0 0 2px var(--if-gold), 0 8px 24px rgba(0,0,0,0.4); }
+.quiz-recap-header { text-align: center; }
+.quiz-recap-title { font-size: 2rem; font-weight: 900; color: var(--if-gold); }
+.quiz-recap-sub { font-size: 1rem; opacity: 0.8; margin-top: 4px; }
+.quiz-recap-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+.recap-podium { display: flex; flex-direction: column; gap: 8px; max-width: 520px; margin: 0 auto; width: 100%; }
+.recap-rank { display: flex; align-items: center; gap: 14px; background: rgba(255,255,255,0.08); border-radius: 12px; padding: 10px 16px; }
+.recap-rank .pos { font-weight: 900; color: var(--if-gold); width: 1.6em; text-align: center; }
+.recap-rank .name { flex: 1; font-weight: 700; }
+.recap-rank .score { font-weight: 900; font-variant-numeric: tabular-nums; }
+.recap-questions { display: flex; flex-direction: column; gap: 10px; max-width: 900px; margin: 0 auto; width: 100%; }
+.recap-q { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 10px 16px; }
+.recap-q-text { font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; }
+.recap-q-bar { height: 8px; border-radius: 6px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.recap-q-fill { height: 100%; background: var(--if-gold); border-radius: 6px; }
+.recap-q-pct { font-size: 0.78rem; opacity: 0.75; margin-top: 4px; text-align: right; }
 
 .mosaic-wrap {
   position: relative;
@@ -228,7 +230,6 @@ html, body {
 .photo-pop.show { display: flex; }
 .photo-pop img { max-width: 60vw; max-height: 55vh; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 4px solid var(--if-gold); }
 .photo-pop .icon-big { font-size: 12rem; }
-.photo-pop .leader-name { font-size: 1.8rem; font-weight: 800; }
 .photo-pop .table-tag { font-size: 1.1rem; color: var(--if-gold); font-weight: 700; }
 
 /* ---------- Flash di transizione fase ---------- */
@@ -263,12 +264,6 @@ html, body {
 .launch-overlay .big-timer { font-size: 4rem; font-weight: 900; color: var(--if-gold); font-variant-numeric: tabular-nums; }
 
 /* ---------- Reveal mode ---------- */
-.side-col { transition: opacity 0.7s ease, filter 0.7s ease, transform 0.7s ease; }
-.screen.reveal .side-col {
-  opacity: 0.12;
-  filter: grayscale(1) blur(1.5px);
-  transform: scale(0.96);
-}
 .mosaic-wrap { transition: box-shadow 0.7s ease; }
 .screen.reveal .mosaic-wrap { box-shadow: 0 0 90px rgba(199,154,43,0.35), 0 0 0 2px rgba(199,154,43,0.3) inset; }
 .screen.reveal .mosaic-title {

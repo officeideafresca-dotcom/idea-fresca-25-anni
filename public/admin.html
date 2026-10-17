@@ -27,9 +27,20 @@
       <div class="status-grid">
         <div class="status-item"><div class="label">Fase</div><div class="value" id="stPhase" style="font-size:0.95rem;">—</div></div>
         <div class="status-item"><div class="label">Tempo</div><div class="value" id="stTimer">30:00</div></div>
-        <div class="status-item"><div class="label">Tavoli inviati</div><div class="value" id="stTables">0/10</div></div>
-        <div class="status-item"><div class="label">Nuovi partner</div><div class="value" id="stNetwork">0</div></div>
+        <div class="status-item"><div class="label">Foto caricate</div><div class="value" id="stPhotos">0</div></div>
       </div>
+    </div>
+
+    <div class="box">
+      <h3>Collega Quiz Live</h3>
+      <div style="font-size:0.76rem; opacity:0.7; margin-bottom:8px;">
+        Legge in automatico classifica e risposte dal quiz svolto nell'altra app, per mostrarle
+        nella fase "Riepilogo Quiz".
+      </div>
+      <input type="text" id="quizLiveUrlInput" placeholder="URL app Quiz Live (es. https://quiz-live-xxxx.onrender.com)" autocomplete="off" />
+      <input type="password" id="quizLivePinInput" placeholder="PIN Admin di Quiz Live" inputmode="numeric" autocomplete="off" />
+      <button class="btn-primary" id="btnFetchRecap">Carica riepilogo quiz</button>
+      <div id="recapStatus" style="font-size:0.85rem; font-weight:700; color:#8fd9a8; min-height:1.2em; margin-top:6px;"></div>
     </div>
 
     <div class="box">
