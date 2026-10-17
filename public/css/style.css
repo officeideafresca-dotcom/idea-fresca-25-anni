@@ -32,9 +32,11 @@ html, body {
 .app-header {
   background: linear-gradient(135deg, var(--if-green-dark), var(--if-green));
   color: #fff;
-  padding: 18px 20px 22px;
+  padding: 14px 20px 22px;
   border-radius: 0 0 24px 24px;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .app-header .brand {
@@ -49,12 +51,13 @@ html, body {
   margin-top: 2px;
 }
 
+/* Riga propria sopra il testo del brand, allineata a destra: così non si sovrappone mai al
+   testo, anche su telefoni stretti o con nomi/slogan lunghi. */
 .lang-switch {
-  position: absolute;
-  top: 16px;
-  right: 16px;
   display: flex;
+  justify-content: flex-end;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .lang-switch button {

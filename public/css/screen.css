@@ -43,6 +43,19 @@ html, body {
   color: var(--if-gold);
   letter-spacing: 1px;
 }
+/* ---------- Indicatore di connessione ---------- */
+.connection-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  text-align: center;
+  padding: 10px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  background: #a13a2c;
+  color: #fff;
+}
+
 /* ---------- Main area ---------- */
 .main-area {
   flex: 1;

@@ -536,5 +536,33 @@
   });
   socket.on('reset', () => location.reload());
 
+  // ---------- Indicatore di connessione ----------
+  // Sul piano gratuito di Render il server può andare in standby o la connessione in tempo
+  // reale può interrompersi senza preavviso: senza un indicatore, lo schermo resta fermo
+  // sull'ultima schermata vista (es. il QR) e sembra "non partire" quando l'admin cambia fase,
+  // anche se il pannello admin funziona normalmente. Qui lo rendiamo visibile e, appena la
+  // connessione torna, richiediamo subito lo stato più recente.
+  let connectionLostAt = null;
+  function showConnectionBanner(text) {
+    const banner = el('connectionBanner');
+    banner.textContent = text;
+    banner.style.display = 'block';
+  }
+  function hideConnectionBanner() {
+    el('connectionBanner').style.display = 'none';
+  }
+  socket.on('disconnect', () => {
+    connectionLostAt = Date.now();
+    showConnectionBanner('⚠️ Connessione persa — sto riconnettendo...');
+  });
+  socket.on('connect', () => {
+    socket.emit('request-state');
+    if (connectionLostAt) {
+      showConnectionBanner('✅ Riconnesso');
+      setTimeout(hideConnectionBanner, 3000);
+      connectionLostAt = null;
+    }
+  });
+
   renderTopLabels();
 })();
