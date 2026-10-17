@@ -16,41 +16,20 @@
   </div>
 
   <div class="app-body" id="appBody">
-    <!-- Table selection -->
-    <div class="card" id="tableSelectCard">
-      <h2 id="selectTableTitle">Seleziona il tuo tavolo</h2>
-      <div class="table-grid" id="tableGrid"></div>
-    </div>
+    <div class="card" id="photoCard">
+      <h2 id="photoTitle">L'Immagine: il Fattore Umano</h2>
+      <p class="subtitle" id="photoSubtitle">Scatta un selfie di squadra pieno di energia</p>
 
-    <div id="mainContent" style="display:none; flex-direction:column; gap:18px;">
-      <div class="card" style="display:flex; align-items:center; justify-content:space-between;">
-        <div>
-          <div style="font-size:0.75rem; color:#888;" id="yourTableLabel">Il tuo tavolo</div>
-          <div style="font-size:1.4rem; font-weight:800; color:var(--if-green-dark);" id="yourTableNumber">—</div>
-        </div>
-        <button class="btn secondary" style="width:auto; margin:0;" id="changeTableBtn">Cambia tavolo</button>
-      </div>
+      <input type="file" accept="image/*" capture="user" id="photoInput" style="display:none;" />
+      <button class="btn gold" id="takePhotoBtn">Scatta / carica selfie</button>
+      <img id="photoPreview" class="photo-preview" alt="" />
 
-      <div class="card" id="photoCard">
-        <h2 id="photoTitle">L'Immagine: il Fattore Umano</h2>
-        <p class="subtitle" id="photoSubtitle">Scatta un selfie di squadra pieno di energia</p>
+      <label id="powerMessageLabel">Power Message</label>
+      <p class="help-text" id="powerMessageHelp"></p>
+      <input type="text" id="powerMessageInput" maxlength="60" placeholder="" />
 
-        <input type="file" accept="image/*" capture="user" id="photoInput" style="display:none;" />
-        <button class="btn gold" id="takePhotoBtn">Scatta / carica selfie</button>
-        <img id="photoPreview" class="photo-preview" alt="" />
-
-        <label id="powerMessageLabel">Power Message</label>
-        <p class="help-text" id="powerMessageHelp"></p>
-        <input type="text" id="powerMessageInput" maxlength="60" placeholder="" />
-
-        <button class="btn" id="sendPhotoBtn" style="display:none;">Invia foto</button>
-        <div class="photo-count" id="photoCountText"></div>
-
-        <div id="iconSection">
-          <div id="chooseIconLabel" style="margin-top:14px; font-size:0.85rem; font-weight:600; color:#444;">Scegli l'icona per il gruppo</div>
-          <div class="icon-grid" id="iconGrid"></div>
-        </div>
-      </div>
+      <button class="btn" id="sendPhotoBtn" style="display:none;">Invia foto</button>
+      <div class="photo-count" id="photoCountText"></div>
     </div>
   </div>
 

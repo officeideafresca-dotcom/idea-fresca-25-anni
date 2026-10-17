@@ -7,58 +7,22 @@ const { Server } = require('socket.io');
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_PIN = process.env.ADMIN_PIN || '2525';
-const TABLE_COUNT = 10;
-const MAX_PHOTOS_PER_TABLE = 20;
+const MAX_PHOTOS = 200;
 const DEFAULT_DURATION_SEC = 30 * 60;
-
-const ICONS = ['mountain', 'hands', 'sprout', 'compass', 'rocket', 'star'];
-
-function makeTable(id) {
-  return {
-    id,
-    lang: null,
-    color: TABLE_COLORS[(id - 1) % TABLE_COLORS.length],
-    icon: null,
-    photos: [], // { id, dataUrl, message, ts }
-    updatedAt: null,
-  };
-}
-
-const TABLE_COLORS = [
-  '#1F6F5C', '#C79A2B', '#2B5FAD', '#B04A3B', '#5B3E9E',
-  '#2E8B8B', '#A15C2B', '#3B7D3B', '#7A3E6E', '#345A7A',
-];
 
 let state = freshState();
 
 function freshState() {
-  const tables = {};
-  for (let i = 1; i <= TABLE_COUNT; i++) tables[i] = makeTable(i);
   return {
     status: 'lobby', // lobby | running | paused | finished
     phase: 0, // 0..4
     startedAt: null,
     pausedRemainingSec: null,
     durationSec: DEFAULT_DURATION_SEC,
-    tables,
+    photos: [], // { id, dataUrl, message, ts }
     quizLiveUrl: '',
     quizLivePin: '',
     quizRecap: null, // riepilogo del quiz letto da Quiz Live (vedi fetch-quiz-recap)
-  };
-}
-
-function countPhotos(tables) {
-  return Object.values(tables).reduce((s, t) => s + t.photos.length, 0);
-}
-
-function publicTableSummary(t) {
-  return {
-    id: t.id,
-    lang: t.lang,
-    color: t.color,
-    icon: t.icon,
-    photosCount: t.photos.length,
-    updatedAt: t.updatedAt,
   };
 }
 
@@ -69,8 +33,8 @@ function fullStatePayload() {
     startedAt: state.startedAt,
     durationSec: state.durationSec,
     pausedRemainingSec: state.pausedRemainingSec,
-    tables: state.tables,
-    photosTotal: countPhotos(state.tables),
+    photos: state.photos,
+    photosTotal: state.photos.length,
     quizRecap: state.quizRecap,
   };
 }
@@ -185,30 +149,19 @@ io.on('connection', (socket) => {
     socket.emit('init', fullStatePayload());
   });
 
-  socket.on('submit-icon', ({ tableId, icon }) => {
-    const t = state.tables[tableId];
-    if (!t || !ICONS.includes(icon)) return;
-    t.icon = icon;
-    t.updatedAt = Date.now();
-    io.emit('icon:update', { tableId: t.id, icon });
-  });
-
-  socket.on('submit-photo', ({ tableId, dataUrl, message, lang }) => {
-    const t = state.tables[tableId];
-    if (!t || !dataUrl) return;
+  socket.on('submit-photo', ({ dataUrl, message }) => {
+    if (!dataUrl) return;
     if (!/^data:image\/(jpeg|png|webp);base64,/.test(dataUrl)) return;
     if (dataUrl.length > 400 * 1024) return; // guard: reject oversized payloads (client should compress)
-    if (t.photos.length >= MAX_PHOTOS_PER_TABLE) return;
-    if (lang) t.lang = t.lang || lang;
+    if (state.photos.length >= MAX_PHOTOS) return;
     const photo = {
-      id: `${tableId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       dataUrl,
       message: String(message || '').slice(0, 80),
       ts: Date.now(),
     };
-    t.photos.push(photo);
-    t.updatedAt = Date.now();
-    io.emit('photo:add', { tableId: t.id, photo, photosCount: t.photos.length, photosTotal: countPhotos(state.tables) });
+    state.photos.push(photo);
+    io.emit('photo:add', { photo, photosTotal: state.photos.length });
   });
 
   socket.on('admin', ({ pin, action, payload }) => {
@@ -268,21 +221,17 @@ io.on('connection', (socket) => {
       // vere. Da rimuovere (insieme al pulsante in admin.html/js) prima dell'evento reale.
       case 'test-fill-photos': {
         const target = (payload && payload.count) || 80;
-        const allPhotos = [];
-        Object.values(state.tables).forEach((t) => t.photos.forEach((p) => allPhotos.push(p)));
-        if (!allPhotos.length) {
+        if (!state.photos.length) {
           socket.emit('admin:error', { message: 'Carica almeno una foto vera prima di usare il riempimento di test', code: 'invalid_image' });
           return;
         }
-        const source = allPhotos.slice(0, 2);
-        const current = allPhotos.length;
-        const t = state.tables[1]; // tutte sul tavolo 1: più veloce da verificare
+        const source = state.photos.slice(0, 2);
         let added = 0;
-        while (current + added < target) {
+        while (state.photos.length < target) {
           const src = source[added % source.length];
           const photo = { id: `test-${Date.now()}-${added}`, dataUrl: src.dataUrl, message: src.message || '', ts: Date.now() };
-          t.photos.push(photo); // limite MAX_PHOTOS_PER_TABLE non applicato: è un riempimento di test
-          io.emit('photo:add', { tableId: t.id, photo, photosCount: t.photos.length, photosTotal: countPhotos(state.tables) });
+          state.photos.push(photo); // limite MAX_PHOTOS non applicato: è un riempimento di test
+          io.emit('photo:add', { photo, photosTotal: state.photos.length });
           added++;
         }
         return;

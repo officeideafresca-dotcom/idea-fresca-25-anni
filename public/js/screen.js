@@ -1,5 +1,4 @@
 (function () {
-  const ICON_EMOJI = { mountain: '🏔️', hands: '🤝', sprout: '🌱', compass: '🧭', rocket: '🚀', star: '⭐' };
   const ROTATE_LANGS = ['it', 'de', 'fr', 'es', 'en'];
   const el = (id) => document.getElementById(id);
   const socket = io();
@@ -13,8 +12,7 @@
   let popQueue = [];
   let popBusy = false;
   let rotateIndex = 0;
-  let pendingMosaic = []; // { type: 'photo'|'icon', tableId, photo?, icon? } in attesa della fase giusta
-  const mosaicIconTiles = {}; // tableId -> DOM element (icon placeholder tile, one per table)
+  let pendingMosaic = []; // { photo } in attesa della fase giusta
 
   // ---------- Suono "whoosh" per il vortice di foto (sintetizzato, nessun file audio) ----------
   // I browser bloccano l'audio finché non c'è stata un'interazione: basta un click/tasto
@@ -166,24 +164,17 @@
   function renderMosaicFromScratch() {
     const grid = el('mosaicGrid');
     grid.innerHTML = '';
-    Object.keys(mosaicIconTiles).forEach((k) => delete mosaicIconTiles[k]);
     pendingMosaic = [];
 
     if (shouldQueueMosaic()) {
       // Ancora prima della fase "Visual Challenge": teniamo tutto in coda, mosaico vuoto
-      Object.values(state.tables).forEach((t) => {
-        (t.photos || []).forEach((p) => pendingMosaic.push({ type: 'photo', tableId: t.id, photo: p }));
-        if ((!t.photos || !t.photos.length) && t.icon) pendingMosaic.push({ type: 'icon', tableId: t.id, icon: t.icon });
-      });
+      (state.photos || []).forEach((p) => pendingMosaic.push({ photo: p }));
       el('mosaicTitle').style.display = 'flex';
       return;
     }
 
     let count = 0;
-    Object.values(state.tables).forEach((t) => {
-      (t.photos || []).forEach((p) => { addMosaicTile(p.dataUrl); count++; });
-      if ((!t.photos || !t.photos.length) && t.icon) { addMosaicIconTile(t.id, t.icon); count++; }
-    });
+    (state.photos || []).forEach((p) => { addMosaicTile(p.dataUrl); count++; });
     el('mosaicTitle').style.display = count > 6 ? 'none' : 'flex';
   }
 
@@ -193,10 +184,7 @@
     const items = pendingMosaic;
     pendingMosaic = [];
     items.forEach((item, i) => {
-      setTimeout(() => {
-        if (item.type === 'photo') addMosaicTileRain(item.photo.dataUrl);
-        else addMosaicIconTile(item.tableId, item.icon);
-      }, i * 40);
+      setTimeout(() => addMosaicTileRain(item.photo.dataUrl), i * 40);
     });
   }
 
@@ -216,31 +204,17 @@
     updateMosaicTitleVisibility();
   }
 
-  function addMosaicIconTile(tableId, icon) {
-    if (mosaicIconTiles[tableId]) {
-      mosaicIconTiles[tableId].textContent = ICON_EMOJI[icon] || '✨';
-      return;
-    }
-    const div = document.createElement('div');
-    div.className = 'mosaic-tile icon-tile';
-    div.textContent = ICON_EMOJI[icon] || '✨';
-    el('mosaicGrid').appendChild(div);
-    mosaicIconTiles[tableId] = div;
-    updateMosaicTitleVisibility();
-  }
-
   // ---------- Photo pop queue ----------
-  function enqueuePhotoPop(tableId, photo) {
-    popQueue.push({ tableId, photo });
+  function enqueuePhotoPop(photo) {
+    popQueue.push(photo);
     processPopQueue();
   }
 
   function processPopQueue() {
     if (popBusy || !popQueue.length) return;
     popBusy = true;
-    const { tableId, photo } = popQueue.shift();
+    const photo = popQueue.shift();
     el('photoPopMedia').innerHTML = `<img src="${photo.dataUrl}" alt="" />`;
-    el('photoPopTable').textContent = `${window.t('it', 'table')} ${tableId}`;
     el('photoPop').classList.add('show');
     setTimeout(() => {
       el('photoPop').classList.remove('show');
@@ -400,8 +374,7 @@
       const grid = el('mosaicGrid');
       if (!wrap || !grid) return;
 
-      const photos = [];
-      Object.values(state.tables).forEach((t) => (t.photos || []).forEach((p) => photos.push(p.dataUrl)));
+      const photos = (state.photos || []).map((p) => p.dataUrl);
       if (!photos.length) return; // nessuna foto: resta la scritta semplice di ripiego
 
       const rect = wrap.getBoundingClientRect();
@@ -512,9 +485,7 @@
     if (oldPhase == null) return; // primo caricamento pagina: non è una transizione da segnalare
     if (newPhase >= PHOTO_REVEAL_PHASE && oldPhase < PHOTO_REVEAL_PHASE) {
       triggerFlash('gold');
-      const photoUrls = pendingMosaic
-        .filter((item) => item.type === 'photo')
-        .map((item) => item.photo.dataUrl);
+      const photoUrls = pendingMosaic.map((item) => item.photo.dataUrl);
       showSpinCluster(photoUrls);
       setTimeout(() => {
         triggerAssembleShake();
@@ -537,29 +508,16 @@
     // il fotomosaico va generato subito: non c'è nessuna transizione di fase da intercettare.
     if (st.phase >= REVEAL_PHASE) setTimeout(renderRevealMosaic, 300);
   });
-  socket.on('icon:update', (payload) => {
-    if (!state) return;
-    const t = state.tables[payload.tableId];
-    if (!t) return;
-    const hadPhotos = t.photos && t.photos.length > 0;
-    t.icon = payload.icon;
-    if (!hadPhotos) {
-      // le icone (a differenza delle foto) non hanno un'anteprima da "spargere" in fase 1:
-      // restano semplicemente in coda finché non si entra in "Visual Challenge"
-      if (photoPhaseMode() === 'live') addMosaicIconTile(payload.tableId, payload.icon);
-      else pendingMosaic.push({ type: 'icon', tableId: payload.tableId, icon: payload.icon });
-    }
-  });
   socket.on('photo:add', (payload) => {
     if (!state) return;
-    const t = state.tables[payload.tableId];
-    if (t) { if (!t.photos) t.photos = []; t.photos.push(payload.photo); }
+    if (!state.photos) state.photos = [];
+    state.photos.push(payload.photo);
     showScatterMessage(payload.photo.message); // il Power Message compare sempre, in ogni fase
     const mode = photoPhaseMode();
     if (mode === 'live') {
-      enqueuePhotoPop(payload.tableId, payload.photo);
+      enqueuePhotoPop(payload.photo);
     } else {
-      pendingMosaic.push({ type: 'photo', tableId: payload.tableId, photo: payload.photo });
+      pendingMosaic.push({ photo: payload.photo });
       if (mode === 'scatter') showScatterPhoto(payload.photo.dataUrl);
     }
   });

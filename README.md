@@ -1,12 +1,12 @@
 # Idea Fresca — 25 Anni · Digital Vision Mosaic & Numbers Quest
 
-Web-app per l'attività di gruppo del retreat: 80 persone, 10 tavoli, 4 lingue, 30 minuti.
-Nessuna installazione: i partecipanti scansionano un QR Code e usano il browser del telefono.
+Web-app per l'attività di gruppo del retreat: foto di squadra condivise in tempo reale su un
+grande mosaico, 4 lingue, durata configurabile. Nessuna installazione: i partecipanti scansionano
+un QR Code e usano il browser del telefono.
 
 ## Come funziona
 
-- **Partecipanti** (`/`): scelgono il tavolo (1–10), scattano/caricano una foto di squadra e
-  scelgono un'icona simbolica per il gruppo. Ogni foto richiede un **Power Message** obbligatorio:
+- **Partecipanti** (`/`): scattano/caricano una foto di squadra. Ogni foto richiede un **Power Message** obbligatorio:
   una frase che compare come "bolla" fluttuante in posizione casuale sullo schermo grande per 3
   secondi (esattamente come le foto in fase "Lancio"), poi sparisce — la foto stessa resta sempre
   pulita, senza testo sopra, sia nel mosaico live sia nell'immagine finale esportata. Interfaccia
@@ -49,8 +49,8 @@ URL e PIN restano salvati nel browser dell'admin per i caricamenti successivi. S
 fallisce, controlla che l'URL sia corretto e che l'altra app Render non sia "addormentata" (vedi
 nota sul piano gratuito più sotto, vale per entrambe le app).
 
-Tutto è **in tempo reale** (Socket.IO): quando un tavolo invia i numeri o una foto, lo schermo
-grande e i telefoni di tutti gli altri si aggiornano istantaneamente.
+Tutto è **in tempo reale** (Socket.IO): quando qualcuno invia una foto, lo schermo grande e i
+telefoni di tutti gli altri si aggiornano istantaneamente.
 
 ## Due modi per farla girare
 
@@ -93,10 +93,10 @@ $env:PORT=3000; $env:ADMIN_PIN=1234; npm start
 
 1. Prima dell'evento: lancia il server sul PC regia, apri `/screen` sul maxischermo, e apri
    `/admin` sul tuo telefono/laptop personale (inserisci il PIN admin per sbloccare i comandi).
-2. Proietta il QR (fase "Lancio"): gli 80 partecipanti scansionano ed entrano su `/`.
+2. Proietta il QR (fase "Lancio"): i partecipanti scansionano ed entrano su `/`.
 3. Dal pannello `/admin` premi **Avvia** per far partire il countdown (durata configurabile).
-4. I tavoli caricano le foto dai propri telefoni: tutto appare live sul maxischermo (foto che
-   appaiono e si aggiungono al mosaico).
+4. I partecipanti caricano le foto dai propri telefoni: tutto appare live sul maxischermo (foto
+   che appaiono e si aggiungono al mosaico).
 5. Usa i pulsanti di fase nel pannello `/admin` per passare a "Riepilogo Quiz" (dopo aver
    caricato i risultati di Quiz Live, vedi sopra) e infine "Vision Reveal" (attiva il fotomosaico
    finale e il banner). Il countdown si ferma da solo a 00:00 ma **non cambia fase
@@ -154,12 +154,9 @@ Render (qualche dollaro) solo per il giorno dell'evento, così il servizio resta
 
 ## Personalizzazione
 
-- **Numero di tavoli**: `TABLE_COUNT` in [server.js](server.js).
-- **Colori dei tavoli**: array `TABLE_COLORS` in [server.js](server.js).
+- **Numero massimo di foto totali**: `MAX_PHOTOS` in [server.js](server.js).
 - **Testi e lingue**: [public/js/i18n.js](public/js/i18n.js) — aggiungere una lingua è questione
   di aggiungere una nuova chiave a `window.I18N` e all'array `LANGS`/`ROTATE_LANGS`.
-- **Icone simboliche**: array `ICONS`/`ICON_EMOJI` in [server.js](server.js),
-  [public/js/participant.js](public/js/participant.js) e [public/js/screen.js](public/js/screen.js).
 
 ## Note tecniche
 
@@ -167,6 +164,6 @@ Render (qualche dollaro) solo per il giorno dell'evento, così il servizio resta
   Riavviare il server azzera tutto — usa il pulsante **Reset** per una nuova sessione mantenendo
   il server attivo.
 - Le foto vengono compresse lato telefono (max 640px, JPEG) prima dell'invio per restare veloci
-  anche su reti Wi-Fi affollate con 80 persone connesse.
+  anche su reti Wi-Fi affollate con molte persone connesse.
 - Consigliato: fare una prova con 2–3 telefoni collegati alla stessa rete prima dell'evento vero,
   e verificare che il PC regia non vada in stand-by/sospensione durante l'attività.

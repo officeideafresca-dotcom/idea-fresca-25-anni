@@ -1,12 +1,8 @@
 (function () {
-  const TABLE_COUNT = 10;
-  const ICONS = ['mountain', 'hands', 'sprout', 'compass', 'rocket', 'star'];
-  const ICON_EMOJI = { mountain: '🏔️', hands: '🤝', sprout: '🌱', compass: '🧭', rocket: '🚀', star: '⭐' };
   const LANGS = ['it', 'de', 'fr', 'es', 'en'];
 
   let lang = localStorage.getItem('if25_lang') || window.detectLang();
-  let tableId = localStorage.getItem('if25_table') || null;
-  let selectedIcon = null;
+  let myPhotoCount = Number(localStorage.getItem('if25_my_photos') || 0);
   let pendingPhotoDataUrl = null;
   let latestState = null;
 
@@ -38,80 +34,23 @@
     document.documentElement.lang = lang;
     el('brandText').textContent = T('brand');
     el('sloganText').textContent = T('slogan');
-    el('selectTableTitle').textContent = T('selectTable');
-    el('yourTableLabel').textContent = T('yourTable');
-    el('changeTableBtn').textContent = T('changeTable');
     el('photoTitle').textContent = T('photoTitle');
     el('photoSubtitle').textContent = T('photoSubtitle');
-    el('takePhotoBtn').textContent = T('takePhoto');
     el('powerMessageLabel').textContent = T('powerMessageLabel');
     el('powerMessageHelp').textContent = T('powerMessageHelp');
     el('powerMessageInput').placeholder = T('powerMessagePlaceholder');
     el('sendPhotoBtn').textContent = T('sendPhoto');
-    el('chooseIconLabel').textContent = T('chooseIcon');
     el('finalImageTitle').textContent = T('finalImageTitle');
     el('finalImageHint').textContent = T('finalImageHint');
     el('finalImageSaveBtn').textContent = T('finalImageSave');
     el('finalImageCloseBtn').textContent = T('finalImageClose');
-    renderIconGrid();
-    renderTableGrid();
     updateStatusBadge();
     updatePhotoCount();
   }
 
-  function renderTableGrid() {
-    const grid = el('tableGrid');
-    grid.innerHTML = '';
-    for (let i = 1; i <= TABLE_COUNT; i++) {
-      const btn = document.createElement('button');
-      btn.className = 'table-btn' + (String(i) === String(tableId) ? ' selected' : '');
-      btn.textContent = i;
-      btn.onclick = () => selectTable(i);
-      grid.appendChild(btn);
-    }
-  }
-
-  function renderIconGrid() {
-    const grid = el('iconGrid');
-    grid.innerHTML = '';
-    ICONS.forEach((icon) => {
-      const btn = document.createElement('button');
-      btn.className = 'icon-btn' + (icon === selectedIcon ? ' selected' : '');
-      btn.innerHTML = `<span class="emoji">${ICON_EMOJI[icon]}</span><span class="label">${T('icons.' + icon)}</span>`;
-      btn.onclick = () => {
-        selectedIcon = icon;
-        socket.emit('submit-icon', { tableId, icon });
-        renderIconGrid();
-        showToast(T('iconSaved'));
-      };
-      grid.appendChild(btn);
-    });
-  }
-
-  function selectTable(id) {
-    tableId = String(id);
-    localStorage.setItem('if25_table', tableId);
-    el('tableSelectCard').style.display = 'none';
-    el('mainContent').style.display = 'flex';
-    el('yourTableNumber').textContent = T('table') + ' ' + tableId;
-    renderTableGrid();
-    prefillFromState();
-  }
-
-  function prefillFromState() {
-    if (!latestState || !tableId) return;
-    const t = latestState.tables[tableId];
-    if (!t) return;
-    if (t.icon) selectedIcon = t.icon;
-    renderIconGrid();
-    updatePhotoCount(t.photosCount);
-  }
-
-  function updatePhotoCount(count) {
-    const t = latestState && tableId ? latestState.tables[tableId] : null;
-    const n = count != null ? count : (t ? t.photosCount : 0);
-    el('photoCountText').textContent = n > 0 ? `${n} ${T('photosSent')}` : '';
-    el('takePhotoBtn').textContent = n > 0 ? T('addPhoto') : T('takePhoto');
+  function updatePhotoCount() {
+    el('photoCountText').textContent = myPhotoCount > 0 ? `${myPhotoCount} ${T('photosSent')}` : '';
+    el('takePhotoBtn').textContent = myPhotoCount > 0 ? T('addPhoto') : T('takePhoto');
   }
 
   function updateStatusBadge() {
@@ -149,7 +88,7 @@
   });
 
   el('sendPhotoBtn').addEventListener('click', () => {
-    if (!tableId || !pendingPhotoDataUrl) return;
+    if (!pendingPhotoDataUrl) return;
     const message = el('powerMessageInput').value.trim();
     if (!message) {
       showToast(T('powerMessageRequired'));
@@ -158,13 +97,16 @@
     }
     // Il Power Message non viene più disegnato sulla foto: viaggia come testo a parte e
     // compare sullo schermo grande come elemento fluttuante per qualche secondo.
-    socket.emit('submit-photo', { tableId, dataUrl: pendingPhotoDataUrl, message, lang });
+    socket.emit('submit-photo', { dataUrl: pendingPhotoDataUrl, message, lang });
+    myPhotoCount++;
+    localStorage.setItem('if25_my_photos', myPhotoCount);
     showToast('📸 ' + T('photosSent'));
     pendingPhotoDataUrl = null;
     el('photoPreview').classList.remove('show');
     el('powerMessageInput').value = '';
     el('photoInput').value = '';
     el('sendPhotoBtn').style.display = 'none';
+    updatePhotoCount();
   });
 
   function compressImage(file, maxDim, quality) {
@@ -190,37 +132,17 @@
     });
   }
 
-  el('changeTableBtn').addEventListener('click', () => {
-    tableId = null;
-    localStorage.removeItem('if25_table');
-    el('tableSelectCard').style.display = 'block';
-    el('mainContent').style.display = 'none';
-    pendingPhotoDataUrl = null;
-    el('photoPreview').classList.remove('show');
-    el('powerMessageInput').value = '';
-    el('photoInput').value = '';
-    el('sendPhotoBtn').style.display = 'none';
-    renderTableGrid();
-  });
-
   // ---- Socket events ----
   socket.on('init', (st) => {
     latestState = st;
     updateStatusBadge();
-    if (tableId) prefillFromState();
-  });
-  socket.on('photo:add', (payload) => {
-    if (latestState && latestState.tables[payload.tableId]) {
-      latestState.tables[payload.tableId].photosCount = payload.photosCount;
-    }
-    if (String(payload.tableId) === String(tableId)) updatePhotoCount(payload.photosCount);
   });
   socket.on('phase:update', (p) => {
     if (latestState) Object.assign(latestState, p);
     updateStatusBadge();
   });
   socket.on('reset', () => {
-    localStorage.removeItem('if25_table');
+    localStorage.removeItem('if25_my_photos');
     location.reload();
   });
   socket.on('final-image', (payload) => {
@@ -236,5 +158,4 @@
   // ---- init ----
   renderLangSwitch();
   applyTranslations();
-  if (tableId) selectTable(Number(tableId));
 })();

@@ -61,8 +61,8 @@
   socket.on('init', (st) => { state = st; renderStatus(); });
   socket.on('photo:add', (p) => {
     if (!state) return;
-    const t = state.tables[p.tableId];
-    if (t) { if (!t.photos) t.photos = []; t.photos.push(p.photo); }
+    if (!state.photos) state.photos = [];
+    state.photos.push(p.photo);
     state.photosTotal = p.photosTotal;
     renderStatus();
   });
@@ -181,8 +181,7 @@
     ctx.fillStyle = '#ffffffcc';
     ctx.fillText('La nostra visione, costruita da tutti noi', 800, 128);
 
-    const photos = [];
-    Object.values(state.tables).forEach((tb) => (tb.photos || []).forEach((p) => photos.push(p.dataUrl)));
+    const photos = (state.photos || []).map((p) => p.dataUrl);
     const gridTop = 170;
     const gridW = 1600;
     const gridH = 900 - gridTop - 60;
