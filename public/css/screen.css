@@ -289,16 +289,6 @@ html, body {
   transition: color 0.6s ease, font-size 0.6s ease;
   text-shadow: 0 0 60px rgba(199,154,43,0.5);
 }
-/* "Together We Are One" è più lunga di "IF/25": serve un font più piccolo per stare nello schermo */
-.screen.reveal .mosaic-title.reveal-slogan {
-  z-index: 6; /* sopra le foto del mosaico (z-index 2), non più dietro */
-  font-size: 4rem;
-  letter-spacing: 2px;
-  line-height: 1.35;
-  color: rgba(217,45,161,0.95);
-  -webkit-text-stroke: 3px rgba(6,33,29,0.9);
-  text-shadow: 0 0 14px rgba(0,0,0,0.85), 0 0 46px rgba(217,45,161,0.7);
-}
 .reveal-banner { animation: bannerPop 0.6s ease; }
 @keyframes bannerPop {
   0% { transform: scale(0.7); opacity: 0; }

@@ -279,7 +279,8 @@
       root.classList.add('reveal');
       banner.style.display = 'block';
       banner.textContent = `${window.t('it', 'screen.revealTitle')} · ${window.t('it', 'screen.revealSubtitle')}`;
-      applyRevealSlogan(true);
+      // Niente scritta "Together We Are One" di passaggio: resta visibile il mosaico di foto
+      // già presente finché non è pronto il vero fotomosaico a forma di scritta.
     } else {
       root.classList.remove('reveal');
       banner.style.display = 'none';
@@ -295,17 +296,13 @@
     updateRevealMode();
   }
 
-  // ---------- Fase "Vision Reveal": scritta dietro il mosaico ----------
-  // Durante il reveal la scritta di sfondo cambia da "IF/25" a "Together We Are One".
-  // È un ripiego immediato: se ci sono foto, pochi istanti dopo viene sostituita dal
-  // fotomosaico vero (stesso identico algoritmo dell'immagine finale esportata).
+  // Quando si esce dalla fase "Vision Reveal" (es. reset), riporta la scritta di sfondo del
+  // mosaico a "IF/25". Durante il reveal stesso non c'è più nessuna scritta di passaggio: il
+  // mosaico di foto resta visibile finché non è pronto il vero fotomosaico a forma di scritta
+  // (stesso identico algoritmo dell'immagine finale esportata).
   function applyRevealSlogan(active) {
     const title = el('mosaicTitle');
-    if (active) {
-      title.innerHTML = 'TOGETHER<br/>WE ARE ONE';
-      title.classList.add('reveal-slogan');
-      title.style.display = 'flex';
-    } else {
+    if (!active) {
       title.innerHTML = 'IF<br/>25';
       title.classList.remove('reveal-slogan');
       updateMosaicTitleVisibility();
@@ -441,8 +438,8 @@
       el('mosaicTitle').style.display = 'none';
       wrap.appendChild(canvas);
     } catch (e) {
-      // Ripiego opzionale: se qualcosa va storto qui, resta comunque visibile la scritta
-      // semplice attivata da applyRevealSlogan(), e il resto del reveal non ne risente.
+      // Ripiego: se qualcosa va storto qui, resta comunque visibile il mosaico di foto già
+      // presente (non sostituito), e il resto del reveal non ne risente.
       console.error('Fotomosaico live del reveal non riuscito:', e);
     }
   }
