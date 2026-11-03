@@ -46,11 +46,14 @@ function fullStatePayload() {
 function buildQuizRecap(data) {
   const questions = Array.isArray(data.questions) ? data.questions : [];
   const players = Array.isArray(data.players) ? data.players : [];
-  const topPlayers = players
-    .slice()
-    .sort((a, b) => (b.score || 0) - (a.score || 0))
-    .slice(0, 5)
-    .map((p) => ({ nickname: String(p.nickname || '').slice(0, 40), score: p.score || 0 }));
+  const showScores = data.showScores !== false;
+  const topPlayers = showScores
+    ? players
+        .slice()
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, 5)
+        .map((p) => ({ nickname: String(p.nickname || '').slice(0, 40), score: p.score || 0 }))
+    : [];
   const questionStats = questions.map((q, i) => {
     const options = Array.isArray(q.options) ? q.options.map((o) => String(o || '').slice(0, 80)) : [];
     const optionCounts = new Array(options.length).fill(0);
@@ -80,6 +83,7 @@ function buildQuizRecap(data) {
   return {
     quizTitle: String(data.quizTitle || 'Quiz').slice(0, 80),
     totalPlayers: players.length,
+    showScores,
     topPlayers,
     questionStats,
     fetchedAt: Date.now(),
