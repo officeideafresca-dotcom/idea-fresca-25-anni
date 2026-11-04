@@ -191,11 +191,10 @@ io.on('connection', (socket) => {
     }
     switch (action) {
       case 'start': {
+        // Il timer è indipendente dalla fase: "Avvia" fa partire solo il conto alla rovescia,
+        // la fase si cambia esclusivamente con i pulsanti "Fasi dell'evento" (bug precedente:
+        // avviare il timer riportava sempre la fase a "Lancio", anche partendo da fase 0).
         state.status = 'running';
-        // Solo il primo avvio (fase 0 "Preparazione") porta avanti la fase: se l'admin ha
-        // già selezionato manualmente una fase successiva, "Avvia" deve solo far partire il
-        // timer senza riportare indietro la fase (bug: resettava sempre a "Lancio").
-        if (state.phase === 0) state.phase = 1;
         state.startedAt = Date.now();
         state.pausedRemainingSec = null;
         if (payload && payload.durationSec) state.durationSec = payload.durationSec;
