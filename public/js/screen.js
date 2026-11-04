@@ -145,6 +145,30 @@
     el('mosaicTitle').style.display = el('mosaicGrid').children.length > 6 ? 'none' : 'flex';
   }
 
+  // Dimensiona le celle del mosaico (colonne/righe) in base al numero di foto attuali, così
+  // che riempiano sempre tutto lo schermo disponibile invece di avere una dimensione fissa
+  // con scroll verticale quando sono tante (es. fase 2 "Visual Challenge" con 80-100+ foto).
+  function layoutMosaicGrid() {
+    const wrap = el('mosaicWrap');
+    const grid = el('mosaicGrid');
+    if (!wrap || !grid) return;
+    const count = grid.children.length;
+    if (!count) {
+      grid.style.gridTemplateColumns = '';
+      grid.style.gridTemplateRows = '';
+      return;
+    }
+    const rect = wrap.getBoundingClientRect();
+    const w = Math.max(100, rect.width - 20); // meno il padding orizzontale della griglia (10px * 2)
+    const h = Math.max(100, rect.height - 20);
+    let cols = Math.max(1, Math.round(Math.sqrt((count * w) / h)));
+    cols = Math.min(cols, count);
+    const rows = Math.ceil(count / cols);
+    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  }
+  window.addEventListener('resize', layoutMosaicGrid);
+
   // Fase 1 "Lancio": mostra una foto in posizione casuale per qualche secondo, poi sparisce.
   function showScatterPhoto(dataUrl) {
     const wrap = el('mosaicWrap');
@@ -190,6 +214,7 @@
     let count = 0;
     (state.photos || []).forEach((p) => { addMosaicTile(p.dataUrl); count++; });
     el('mosaicTitle').style.display = count > 6 ? 'none' : 'flex';
+    layoutMosaicGrid();
   }
 
   // Fase 2 "Visual Challenge": effetto pioggia, le foto accumulate cadono nel mosaico
@@ -208,6 +233,7 @@
     img.src = dataUrl;
     el('mosaicGrid').appendChild(img);
     updateMosaicTitleVisibility();
+    layoutMosaicGrid();
   }
 
   function addMosaicTileRain(dataUrl) {
@@ -216,6 +242,7 @@
     img.src = dataUrl;
     el('mosaicGrid').appendChild(img);
     updateMosaicTitleVisibility();
+    layoutMosaicGrid();
   }
 
   // ---------- Photo pop queue ----------
