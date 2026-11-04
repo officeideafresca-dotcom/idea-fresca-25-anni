@@ -192,7 +192,10 @@ io.on('connection', (socket) => {
     switch (action) {
       case 'start': {
         state.status = 'running';
-        state.phase = 1;
+        // Solo il primo avvio (fase 0 "Preparazione") porta avanti la fase: se l'admin ha
+        // già selezionato manualmente una fase successiva, "Avvia" deve solo far partire il
+        // timer senza riportare indietro la fase (bug: resettava sempre a "Lancio").
+        if (state.phase === 0) state.phase = 1;
         state.startedAt = Date.now();
         state.pausedRemainingSec = null;
         if (payload && payload.durationSec) state.durationSec = payload.durationSec;
