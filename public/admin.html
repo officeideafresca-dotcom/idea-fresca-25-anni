@@ -32,6 +32,19 @@
     </div>
 
     <div class="box">
+      <h3>Link per i partecipanti</h3>
+      <div style="font-size:0.76rem; opacity:0.7; margin-bottom:8px;">
+        Da condividere (es. in chat durante una videochiamata) con chi non può inquadrare il QR
+        code dallo smartphone.
+      </div>
+      <div class="row">
+        <input type="text" id="participantLinkInput" readonly />
+        <button class="btn-secondary" id="btnCopyParticipantLink">Copia</button>
+      </div>
+      <div id="participantLinkStatus" style="font-size:0.85rem; font-weight:700; color:#8fd9a8; min-height:1.2em; margin-top:6px;"></div>
+    </div>
+
+    <div class="box">
       <h3>Collega Quiz Live</h3>
       <div style="font-size:0.76rem; opacity:0.7; margin-bottom:8px;">
         Legge in automatico classifica e risposte dal quiz svolto nell'altra app, per mostrarle

@@ -11,6 +11,21 @@
 
   function fmt(n) { return Number(n || 0).toLocaleString('it-IT'); }
 
+  // Link diretto da condividere con chi non può inquadrare il QR code (es. partecipanti in
+  // videochiamata dallo smartphone): stesso indirizzo codificato nel QR, come testo copiabile.
+  el('participantLinkInput').value = `${location.origin}/`;
+  el('btnCopyParticipantLink').addEventListener('click', async () => {
+    const link = el('participantLinkInput').value;
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch (e) {
+      el('participantLinkInput').select();
+      document.execCommand('copy');
+    }
+    el('participantLinkStatus').textContent = 'Copiato!';
+    setTimeout(() => { el('participantLinkStatus').textContent = ''; }, 2500);
+  });
+
   function phaseLabels() { return window.t('it', 'screen.phaseLabels'); }
 
   function renderPhaseList() {
