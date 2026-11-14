@@ -8,7 +8,7 @@ const { Server } = require('socket.io');
 const PORT = process.env.PORT || 3000;
 const ADMIN_PIN = process.env.ADMIN_PIN || '2525';
 const MAX_PHOTOS = 200;
-const DEFAULT_DURATION_SEC = 30 * 60;
+const DEFAULT_DURATION_SEC = 5 * 60;
 
 let state = freshState();
 
